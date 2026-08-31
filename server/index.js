@@ -11,6 +11,29 @@ app.use(express.json())
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }))
 
+const demoBonafideRequests = [
+  { id: 4, studentName: 'Gaurav Hajare', admissionNo: 'STU-6197-2026-163092', department: 'MBA', submittedAt: '31 Aug 2026', reason: 'FOR BUS PASS', status: 'PRINCIPAL_PENDING' }
+]
+
+app.get('/api/bonafide', (_req, res) => {
+  res.json({ requests: demoBonafideRequests.filter(request => request.status === 'PRINCIPAL_PENDING') })
+})
+
+app.post('/api/bonafide/:id/approve', async (req, res) => {
+  const id = Number(req.params.id)
+  const request = demoBonafideRequests.find(item => item.id === id)
+  if (!request) return res.status(404).json({ message: 'Bonafide request not found.' })
+  if (request.status !== 'PRINCIPAL_PENDING') {
+    return res.status(409).json({ message: 'This bonafide request has already been processed.' })
+  }
+  request.status = 'APPROVED'
+  request.approvedBy = req.body?.approvedBy?.trim() || 'Principal'
+  request.approvedAt = new Date().toISOString()
+  await mkdir(join(process.cwd(), 'data'), { recursive: true })
+  await appendFile(join(process.cwd(), 'data', 'bonafide-approvals.ndjson'), `${JSON.stringify(request)}\n`)
+  return res.json({ request, message: 'Bonafide request approved successfully.' })
+})
+
 app.post('/api/enquiries', async (req, res) => {
   const { name, phone, email = '', subject = '', message = '' } = req.body ?? {}
   if (!name?.trim() || !phone?.trim()) {
