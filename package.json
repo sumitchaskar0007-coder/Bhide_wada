@@ -9,13 +9,17 @@
   "scripts": {
     "dev": "concurrently \"npm:server\" \"npm:client\"",
     "client": "vite",
-    "server": "node --watch server/index.js",
+    "server": "node --watch backend/server.js",
     "build": "vite build",
-    "start": "node server/index.js"
+    "start": "node backend/server.js"
   },
   "dependencies": {
+    "cloudinary": "^2.7.0",
     "cors": "latest",
+    "dotenv": "^16.6.1",
     "express": "latest",
+    "mongoose": "^8.12.1",
+    "multer": "^2.0.2",
     "react": "latest",
     "react-dom": "latest"
   },

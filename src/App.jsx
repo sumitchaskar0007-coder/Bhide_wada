@@ -1,4 +1,66 @@
-import {useEffect, useState} from 'react'
-import Navbar from './components/Navbar'; import Footer from './components/Footer'; import {usePath} from './components/RouterLink'; import HomePage from './pages/HomePage'; import {ContentPage,GalleryPage,ContactPage} from './pages/ContentPages'
-function Bonafide(){const[requests,setRequests]=useState([]);const[state,setState]=useState({loading:true,error:'',busy:null});const load=async()=>{setState({loading:true,error:'',busy:null});try{const r=await fetch('/api/bonafide?role=principal');const d=await r.json();if(!r.ok)throw Error(d.message||'Unable to load requests.');setRequests(d.requests);setState({loading:false,error:'',busy:null})}catch(e){setState({loading:false,error:e.message,busy:null})}};useEffect(()=>{load()},[]);const approve=async id=>{setState(s=>({...s,busy:id,error:''}));try{const r=await fetch(`/api/bonafide/${id}/approve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approvedBy:'Principal'})});const d=await r.json();if(!r.ok)throw Error(d.message||'Approval failed.');setRequests(xs=>xs.filter(x=>x.id!==id))}catch(e){setState(s=>({...s,error:e.message}))}finally{setState(s=>({...s,busy:null}))}};return <section className="bonafide-page"><div className="bonafide-top"><div><p className="eyebrow gold">Principal workspace</p><h1>Bonafide requests</h1><p>Review requests verified by the Fee Section and approve them for completion.</p></div><button className="outline" onClick={load} disabled={state.loading}>↻ Refresh list</button></div>{state.error&&<div className="bonafide-error" role="alert">⚠ {state.error}</div>}<div className="bonafide-card"><div className="bonafide-card-head"><div><b>Pending principal approval</b><span>{requests.length} request(s) in your college</span></div><strong>{requests.length?'Principal pending':'All clear'}</strong></div>{state.loading?<p className="bonafide-empty">Loading requests…</p>:requests.length===0?<p className="bonafide-empty">No pending bonafide requests.</p>:requests.map(x=><article className="bonafide-row" key={x.id}><div className="student-icon">♙</div><div className="student-details"><h3>{x.studentName} <span>PRINCIPAL PENDING</span></h3><p>Admission no: <b>{x.admissionNo}</b> · Department: <b>{x.department}</b></p><p>Submitted {x.submittedAt} · Request ID: <b>#{x.id}</b></p><div><b>Reason:</b> {x.reason}</div></div><div className="bonafide-actions"><button className="outline" onClick={()=>window.alert(`${x.studentName}\n${x.admissionNo}\n${x.department}`)}>◉ View student</button><button className="primary" onClick={()=>approve(x.id)} disabled={state.busy===x.id}>{state.busy===x.id?'Approving…':'✓ Approve request'}</button></div></article>)}</div></section>}
-export default function App(){const[language,setLanguage]=useState(()=>localStorage.getItem('language')||'mr');const changeLanguage=l=>{setLanguage(l);localStorage.setItem('language',l)};const p=usePath();const k=p.slice(1);if(p==='/principal/bonafide')return <Bonafide/>;const valid=['about','committee','projects','news','events','membership','documents'];const body=p==='/'?<HomePage language={language}/>:p==='/gallery'?<GalleryPage language={language}/>:p==='/contact'?<ContactPage language={language}/>:<ContentPage type={valid.includes(k)?k:'about'} language={language}/>;return <><div className="approval-banner">{language==='en'?'This website is a prototype. Committee approval is required before publishing factual information.':'ही वेबसाइटचा प्रारूप आहे. माहिती प्रसिद्ध करण्यापूर्वी समितीची मंजुरी आवश्यक आहे.'}</div><Navbar language={language} setLanguage={changeLanguage}/>{body}<Footer language={language}/></>}
+import {useState} from 'react'
+import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+import {usePath} from './components/RouterLink'
+import HomePage from './pages/HomePage'
+import {ContactPage,ContentPage} from './pages/ContentPages'
+import {DocumentsPage,MembershipPage} from './pages/CommunityPages'
+import NewsPage from './pages/News'
+import EventsPage from './pages/Events'
+import GalleryPage from './pages/Gallery'
+import BonafidePage from './pages/BonafidePage'
+import NotFoundPage from './pages/NotFoundPage'
+import AdminGuard from './pages/admin/AdminGuard'
+import AdminLayout from './pages/admin/AdminLayout'
+import AdminLogin from './pages/admin/AdminLogin'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import NewsAdmin from './pages/admin/NewsAdmin'
+import EventAdmin from './pages/admin/EventAdmin'
+import GalleryAdmin from './pages/admin/GalleryAdmin'
+import HeroAdmin from './pages/admin/HeroAdmin'
+
+const pageRoutes={
+  '/':language=><HomePage language={language}/>,
+  '/about':language=><ContentPage type="about" language={language}/>,
+  '/committee':language=><ContentPage type="committee" language={language}/>,
+  '/projects':language=><ContentPage type="projects" language={language}/>,
+  '/news':language=><NewsPage language={language}/>,
+  '/events':language=><EventsPage language={language}/>,
+  '/gallery':language=><GalleryPage language={language}/>,
+  '/membership':language=><MembershipPage language={language}/>,
+  '/documents':language=><DocumentsPage language={language}/>,
+  '/contact':language=><ContactPage language={language}/>
+}
+
+const adminRoutes={
+  '/admin/dashboard':<AdminDashboard/>,
+  '/admin/news':<NewsAdmin/>,
+  '/admin/events':<EventAdmin/>,
+  '/admin/gallery':<GalleryAdmin/>,
+  '/admin/hero':<HeroAdmin/>
+}
+
+export default function App(){
+  const [language,setLanguage]=useState(()=>localStorage.getItem('language')||'mr')
+  const path=usePath().replace(/\/+$/,'')||'/'
+
+  if(path==='/principal/bonafide') return <BonafidePage/>
+  if(path==='/admin/login') return <AdminLogin/>
+  if(adminRoutes[path]) return <AdminGuard><AdminLayout>{adminRoutes[path]}</AdminLayout></AdminGuard>
+  if(path.startsWith('/admin/')) return <NotFoundPage language={language}/>
+
+  const changeLanguage=nextLanguage=>{
+    setLanguage(nextLanguage)
+    localStorage.setItem('language',nextLanguage)
+  }
+  const renderPage=pageRoutes[path]
+  const page=renderPage
+    ?renderPage(language)
+    :<NotFoundPage language={language}/>
+
+  return <>
+    <Navbar language={language} setLanguage={changeLanguage}/>
+    {page}
+    <Footer language={language}/>
+  </>
+}
