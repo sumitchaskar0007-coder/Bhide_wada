@@ -11,6 +11,8 @@ npm run dev
 
 Open `http://localhost:5173`. The API runs on `http://localhost:5038` by default and Vite forwards `/api` requests to it. Set `PORT` to override the backend port.
 
+To use the deployed VPS API while running the frontend locally, put `VITE_API_PROXY_TARGET=https://api.phulewadarashtriyasmarak.com` in the root `.env.development.local`. Vite then proxies `/api` requests locally, avoiding browser CORS errors. Admin login and other protected mutations also require the VPS backend's trusted `CLIENT_ORIGIN` to allow the exact local origin (for example, `http://127.0.0.1:5173`); restart the backend after changing its environment.
+
 ## News, events, gallery, and admin
 
 The News, Events, and Gallery pages load published content from MongoDB. The protected admin dashboard at `/admin/dashboard` lets the configured administrator create, edit, and delete those records. The `/admin/hero` manager controls active Home hero images; active images rotate on the home page. Sign in at `/admin/login`; direct dashboard and content-manager routes require an authenticated session.
