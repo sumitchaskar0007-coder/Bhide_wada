@@ -9,9 +9,9 @@
   "scripts": {
     "dev": "concurrently \"npm:server\" \"npm:client\"",
     "client": "vite",
-    "server": "node --watch backend/server.js",
+    "server": "node --watch bhide_wada_backend/server.js",
     "build": "vite build",
-    "start": "node backend/server.js"
+    "start": "node bhide_wada_backend/server.js"
   },
   "dependencies": {
     "cloudinary": "^2.7.0",

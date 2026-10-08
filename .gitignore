@@ -4,4 +4,4 @@ data/enquiries.ndjson
 .env
 .env.*
 !.env.example
-
+!.env.production

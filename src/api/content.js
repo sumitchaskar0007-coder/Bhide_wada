@@ -1,5 +1,7 @@
-const configuredApiUrl=(import.meta.env.VITE_API_URL||'https://api.phulewadarashmarak.com/api').replace(/\/+$/,'')
-const apiBaseUrl=/\/api$/i.test(configuredApiUrl)?configuredApiUrl:`${configuredApiUrl}/api`
+const configuredApiUrl=(import.meta.env.VITE_API_URL||'').replace(/\/+$/,'')
+const apiBaseUrl=configuredApiUrl
+  ?(/\/api$/i.test(configuredApiUrl)?configuredApiUrl:`${configuredApiUrl}/api`)
+  :'/api'
 
 async function request(url,options={}){
   const response=await fetch(`${apiBaseUrl}${url}`,{credentials:'include',...options})
