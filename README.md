@@ -1,55 +1,85 @@
-# भिडे वाडा पुनर्वसन समिती
+# Bhide Wada website
 
-Marathi-first React + Node website based on the supplied visual reference and client handover document.
+React frontend and Node.js / Express backend, with an authenticated administration dashboard. Content, administrator accounts, sessions, activity history and enquiries are stored in SQLite. Uploaded media is stored locally. MongoDB and Cloudinary are not required.
 
 ## Run locally
 
-```bash
-npm install
+Requires Node.js **22.13 or newer** (the backend uses the built-in `node:sqlite` module).
+
+```sh
+npm ci
+npm run admin:setup
 npm run dev
 ```
 
-Open `http://localhost:5173`. The API runs on `http://localhost:5038` by default and Vite forwards `/api` requests to it. Set `PORT` to override the backend port.
+Open the Vite URL shown in the terminal, normally `http://127.0.0.1:5173`. The API listens at `http://127.0.0.1:5038`; Vite forwards `/api` requests to it. If another frontend is already running on port 5173, Vite may use 5174. Both localhost and 127.0.0.1 on ports 5173 and 5174 are allowed by default.
 
-To use the deployed VPS API while running the frontend locally, put `VITE_API_PROXY_TARGET=https://api.phulewadarashtriyasmarak.com` in the root `.env.development.local`. Vite then proxies `/api` requests locally, avoiding browser CORS errors. Admin login and other protected mutations also require the VPS backend's trusted `CLIENT_ORIGIN` to allow the exact local origin (for example, `http://127.0.0.1:5173`); restart the backend after changing its environment.
+The setup command creates the first administrator and writes a randomly generated password to **`.data/initial-admin.txt`** with owner-only access. Sign in at **`/admin/login`**, change the password under Account settings, and delete the initial credential file. An existing account is never overwritten by setup. To choose initial credentials, set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in a root `.env` file before running setup (minimum password length: 14 characters). They are used for initial setup only; later password changes are saved in the database.
 
-## News, events, gallery, and admin
+Copy `.env.example` to `.env` to customize backend settings. Keep environment and initial credential files private. The `.data/` directory is excluded from Git.
 
-The News, Events, and Gallery pages load published content from MongoDB. The protected admin dashboard at `/admin/dashboard` lets the configured administrator create, edit, and delete those records. The `/admin/hero` manager controls active Home hero images; active images rotate on the home page. Sign in at `/admin/login`; direct dashboard and content-manager routes require an authenticated session.
+## Dashboard
 
-Before starting the backend:
+- **Overview:** content counts, published/hidden totals, unread enquiries and recent activity.
+- **Announcements:** create/edit/delete notices, save drafts, pin important notices and optionally set expiry dates and links. Published notices appear in the homepage update strip and `/announcements`.
+- **News:** manage stories, summaries, text and optional cover media; published news appears at `/news`.
+- **Events:** manage event details, dates and locations; published records appear at `/events`. Dates are stored in UTC and shown in the visitor's local timezone.
+- **Gallery:** upload images/videos, link to public HTTPS media, or embed YouTube videos. Published records appear at `/gallery`.
+- **Hero slides:** upload additional banner images, publish/unpublish them, and enable/disable them in the slideshow. The three existing local hero images remain; dashboard images are appended. The homepage introduction text remains on its first image only.
+- **Enquiries:** view messages submitted through `/contact`, mark them read/resolved or delete them. This is an inbox; it does not send email.
+- **Account settings:** change the password and revoke other signed-in sessions.
 
-1. Copy `.env.example` to `bhide_wada_backend/.env` and replace every example value. The backend loads its environment file from that directory.
-2. Set `MONGODB_URI` to a MongoDB Atlas connection string. Add the machine running the backend to the Atlas network access list and URL-encode special characters in the database password.
-3. Set the Cloudinary cloud name, API key, and API secret. Gallery accepts image/video file uploads and public HTTPS media URLs, which are imported into Cloudinary. YouTube links are embedded with YouTube's privacy-enhanced player and are not uploaded as files to Cloudinary. There is no application-defined file-size limit; practical upload limits depend on available server disk space, network timeouts, and your Cloudinary plan.
-4. Set a unique `ADMIN_USERNAME` and an `ADMIN_PASSWORD` at least 14 characters long. There is no public admin registration or default password.
-5. For local development, keep `PORT=5038` and `CLIENT_ORIGIN=http://localhost:5173`; Vite proxies `/api` requests to the backend. If Vite starts on a different port, update `CLIENT_ORIGIN`. For a separately hosted frontend, set `VITE_API_URL` in the frontend build environment to the backend origin (or its `/api` URL), and set `CLIENT_ORIGIN` in the backend environment to the deployed frontend origin.
+Content forms support browser-local drafts, record search and publication filters. Unpublished records remain accessible only through the authenticated API. The existing public page text, branding and image assets are retained.
 
-The admin session is held in an HTTP-only cookie and expires after eight hours. It uses SameSite=Strict in development and SameSite=None with Secure in production to support separately hosted frontend/API origins; all admin mutations validate the exact configured `CLIENT_ORIGIN`. For production, serve over HTTPS and set `CLIENT_ORIGIN` to the exact frontend origin. Admin sessions are kept in backend memory, so sign-ins are cleared when the backend restarts.
+## Media
 
-The backend process serves the API; deploy the generated `dist/` frontend separately or configure the production web server to serve it, with history fallback enabled so direct visits and refreshes on `/news`, `/events`, `/gallery`, and `/admin/*` load the React application.
+Supported uploads: PNG, JPEG, WebP, GIF, MP4 and WebM. Hero slides accept images only. Files are checked against their content signatures and MIME type, assigned random filenames, and limited to **50 MB per file** by default (`MAX_UPLOAD_MB`). Replacing or deleting a record removes its old local media. Public media is served from `/api/media/…` with MIME sniffing disabled.
+
+HTTPS media links remain hosted at their source; the backend does not download remote URLs. YouTube links are converted to privacy-enhanced embed URLs. Local upload files and the SQLite database must be retained together when backing up or migrating.
+
+## Authentication
+
+Passwords use Node's salted scrypt password hashing. Session cookies are HTTP-only, expire after eight hours, and contain only a random token; token hashes are stored in SQLite. Logging out invalidates the session. Changing the password revokes all previous sessions. Protected API endpoints enforce authentication independently of the frontend, mutations validate the exact request Origin, and login/password attempts are rate limited. HTTPS production cookies use Secure and SameSite=Lax.
+
+Sessions and content persist across backend restarts. Deploy a **single backend instance** with a writable persistent data directory. In-process rate limits reset when that process restarts. There is one administrator account; public registration, email-based recovery and multiple administrative roles are not included.
 
 ## Production
 
-```bash
+Build the frontend:
+
+```sh
 npm run build
-npm run start
 ```
 
-The production frontend build reads `.env.production` and calls `https://api.phulewadarashtriyasmarak.com/api`. Keep local development on the default same-origin `/api` URL so Vite can proxy requests to `http://localhost:5038`.
+Configure the root `.env` on the server:
 
-### VPS API setup
+```dotenv
+NODE_ENV=production
+HOST=127.0.0.1
+PORT=5038
+CLIENT_ORIGIN=https://your-domain.com
+DATA_DIR=/absolute/path/to/persistent/bhide-data
+MAX_UPLOAD_MB=50
+```
 
-1. Create a DNS `A` record for `api.phulewadarashtriyasmarak.com` pointing to the VPS public IPv4 address. Configure HTTPS for that hostname.
-2. Install Node.js 18 or newer on the VPS, deploy the project, and run `npm ci --omit=dev` from the project root.
-3. Create `bhide_wada_backend/.env` on the VPS with the production `MONGODB_URI`, Cloudinary credentials, a unique `ADMIN_USERNAME`, a strong `ADMIN_PASSWORD` (at least 14 characters), `PORT=5038`, `NODE_ENV=production`, and `CLIENT_ORIGIN=https://phulewadarashtriyasmarak.com`. Do not commit or share this file.
-4. Run the backend with a process manager such as systemd. Configure the HTTPS reverse proxy for `api.phulewadarashtriyasmarak.com` to forward `/api/` to `http://127.0.0.1:5038/api/`. Keep the frontend hosted at `https://phulewadarashtriyasmarak.com`.
-5. Verify `https://api.phulewadarashtriyasmarak.com/api/health` returns `{"status":"ok"}`, then build and deploy the frontend with `npm run build`.
+Provision the initial admin against the same data directory, then start the app:
 
-## Enquiries
+```sh
+npm run admin:setup
+npm start
+```
 
-The contact form validates name and phone server-side and stores submitted records as newline-delimited JSON in `data/enquiries.ndjson`. For a production launch, replace this with the approved email/CRM/database workflow.
+Use a process manager and an HTTPS reverse proxy forwarding the website and `/api` to this Node server. It serves the `dist/` frontend with history fallback and the API on the same origin. The production frontend defaults to relative `/api` requests. `CLIENT_ORIGIN` must match the exact HTTPS website origin; comma-separated trusted origins are supported. Configure reverse-proxy request-size limits for your chosen upload limit. Production startup requires HTTPS origins.
 
-## Content approval before launch
+Back up `.data/` (or `DATA_DIR`) while the server is stopped, including the SQLite database and uploads. Do not publish this directory or its credential file as static content. This repository does not deploy infrastructure or configure external backups.
 
-Phone numbers, email, social links, news, events, statistics, committee details, and imagery are representative content drawn from the design direction. Replace them with verified, client-approved information before publishing.
+For a separate API hostname, explicitly set `VITE_API_URL` before building and add the frontend's HTTPS origin to `CLIENT_ORIGIN`. The supplied defaults are for same-origin hosting.
+
+## Verification
+
+```sh
+npm test
+npm run build
+```
+
+The integration suite uses a temporary SQLite database and local HTTP server. It covers protected endpoints, login/cookies, invalid origins, draft/public content separation, announcement pinning/expiry, date validation, upload validation and cleanup, gallery links, enquiry handling, persistence, password changes, session expiry/logout, and rate limiting. Test records and credentials are never written to the live data directory.

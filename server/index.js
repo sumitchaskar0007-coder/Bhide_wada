@@ -1,1 +1,1 @@
-export {app} from '../backend/server.js'
+export {app} from '../bhide_wada_backend/server.js'

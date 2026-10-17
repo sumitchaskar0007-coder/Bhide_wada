@@ -11,6 +11,8 @@ export default function AdminGuard({children}){
 
   useEffect(()=>{
     let active=true
+    const expire=()=>goToLogin()
+    const timer=setInterval(()=>{getAdminSession().then(data=>{if(active&&!data.authenticated)expire()}).catch(()=>{})},60000)
     getAdminSession()
       .then(({authenticated})=>{
         if(!active)return
@@ -18,7 +20,7 @@ export default function AdminGuard({children}){
         setState({loading:false,error:''})
       })
       .catch(error=>{if(active)setState({loading:false,error:error.message})})
-    return ()=>{active=false}
+    return ()=>{active=false;clearInterval(timer)}
   },[])
 
   if(state.loading)return <main className="admin-loading" role="status">Checking admin session…</main>

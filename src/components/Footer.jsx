@@ -1,7 +1,7 @@
 import {routes} from './Navbar'
 import {Link} from './RouterLink'
 
-const englishRoutes=['Home','About','Committee','Projects / Activities','News','Events','Gallery','Membership','Documents','Contact']
+const englishRoutes=['Home','About','Committee','Projects / Activities','News','Events','Gallery','Membership','Documents','Contact','Announcements']
 const footerCopy={
   en:{
     description:'Preserving heritage, supporting rehabilitation, and strengthening our community.',
@@ -39,6 +39,7 @@ export default function Footer({language='mr'}){
     <div className="shell footer-main">
       <section className="footer-identity" aria-label={name}>
         <Link className="footer-brand" to="/">
+          <img className="footer-brand-logo" src="/assets/images/logo.png" width="794" height="507" alt="" loading="lazy"/>
           <b>{name}</b>
         </Link>
         <p>{t.description}</p>

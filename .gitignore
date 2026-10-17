@@ -5,3 +5,5 @@ data/enquiries.ndjson
 .env.*
 !.env.example
 !.env.production
+
+.data/

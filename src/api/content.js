@@ -6,6 +6,10 @@ const apiBaseUrl=configuredApiUrl
 async function request(url,options={}){
   const response=await fetch(`${apiBaseUrl}${url}`,{credentials:'include',...options})
   const data=await response.json().catch(()=>({}))
+  if(response.status===401&&location.pathname.startsWith('/admin')&&location.pathname!=='/admin/login'){
+    history.replaceState({},'','/admin/login')
+    dispatchEvent(new Event('popstate'))
+  }
   if(!response.ok) throw new Error(data.message||'The request could not be completed.')
   return data
 }
@@ -32,4 +36,8 @@ export function loginAdmin(credentials){
 
 export function logoutAdmin(){
   return request('/admin/logout',{method:'POST'})
+}
+
+export function submitEnquiry(data){
+  return request('/enquiries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
 }

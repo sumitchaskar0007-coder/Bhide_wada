@@ -4,14 +4,16 @@
   "version": "1.0.0",
   "type": "module",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "dev": "concurrently \"npm:server\" \"npm:client\"",
     "client": "vite",
     "server": "node --watch bhide_wada_backend/server.js",
     "build": "vite build",
-    "start": "node bhide_wada_backend/server.js"
+    "start": "node bhide_wada_backend/server.js",
+    "admin:setup": "node bhide_wada_backend/setup-admin.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "cloudinary": "^2.7.0",

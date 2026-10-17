@@ -20,9 +20,9 @@ export default function AdminLogin(){
 
   return <main className="admin-login-page">
     <form className="admin-login-card" onSubmit={submit}>
-      <p className="eyebrow">Secure administration</p>
+      <img className="admin-login-logo" src="/assets/images/logo.png" alt="Bhide Wada"/><p className="eyebrow">Secure administration</p>
       <h1>Admin login</h1>
-      <p>Sign in to manage published news, events, and gallery media.</p>
+      <p>Sign in to manage announcements, news, events, gallery media and community enquiries.</p>
       {state.error&&<p className="admin-error" role="alert">{state.error}</p>}
       <label>Username<input autoComplete="username" required value={credentials.username} onChange={event=>setCredentials(current=>({...current,username:event.target.value}))}/></label>
       <label>Password<input type="password" autoComplete="current-password" required value={credentials.password} onChange={event=>setCredentials(current=>({...current,password:event.target.value}))}/></label>

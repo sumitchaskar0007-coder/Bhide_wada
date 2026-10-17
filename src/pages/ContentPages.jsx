@@ -1,3 +1,5 @@
+import {useState} from 'react'
+import {submitEnquiry} from '../api/content'
 import PageLayout from './PageLayout'
 
 const heritageImages={
@@ -106,6 +108,13 @@ export function ContentPage({type,language='mr'}) {
 const contactMapEmbedUrl='https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3783.2774944450457!2d73.8538015738005!3d18.516358169305626!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2c06fa6a06b6f%3A0xce2f52914e0bb6a7!2zQkhJREUgV0FEQSDgpK3gpL_gpKHgpYfgpLXgpL7gpKHgpL4gKOCkreCkv-CkoeClh-CkteCkvuCkoeCkviDgpKzgpJrgpL7gpLUg4KSu4KWL4KS54KS_4KSuKeCkuOCkguCkuOCljeCkpeCkvuCkquCklSAt4KSq4KWN4KSw4KS24KS-4KSC4KSkIOCkq-ClgeCksuClhw!5e0!3m2!1sen!2sin!4v1791283093145!5m2!1sen!2sin'
 
 export function ContactPage({language='mr'}){
+  const [form,setForm]=useState({name:'',phone:'',email:'',message:''})
+  const [state,setState]=useState({busy:false,error:'',notice:''})
+  const submit=async event=>{
+    event.preventDefault();setState({busy:true,error:'',notice:''})
+    try{await submitEnquiry(form);setForm({name:'',phone:'',email:'',message:''});setState({busy:false,error:'',notice:language==='en'?'Your enquiry has been received.':'आपली चौकशी प्राप्त झाली आहे.'})}
+    catch(error){setState({busy:false,error:error.message,notice:''})}
+  }
   const t=common[language]||common.mr
   const isEnglish=language==='en'
   return <PageLayout title={t.contact} intro={t.contactIntro}>
@@ -118,7 +127,7 @@ export function ContactPage({language='mr'}){
         <a className="map-link" href="https://www.google.com/maps/search/?api=1&query=Bhide+Wada+Budhwar+Peth+Pune" target="_blank" rel="noreferrer">{isEnglish?'Open in Google Maps →':'Google Maps वर उघडा →'}</a>
         <iframe className="contact-map-embed" src={contactMapEmbedUrl} title={isEnglish?'Map to Bhide Wada':'भिडे वाड्याचा नकाशा'} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen/>
       </aside>
-      <form className="contact-form"><input placeholder={t.name} required/><input placeholder={t.phone} required/><input type="email" placeholder={t.email}/><textarea placeholder={t.message} rows="5"/><button className="primary">{t.send}</button></form>
+      <form className="contact-form" onSubmit={submit}>{[['name',t.name,'text'],['phone',t.phone,'tel'],['email',t.email,'email']].map(([name,label,type])=><input key={name} type={type} aria-label={label} placeholder={label} required={name!=='email'} maxLength={name==='name'?100:name==='phone'?20:254} value={form[name]} onChange={event=>setForm(current=>({...current,[name]:event.target.value}))}/>)}<textarea aria-label={t.message} placeholder={t.message} rows="5" maxLength={5000} value={form.message} onChange={event=>setForm(current=>({...current,message:event.target.value}))}/>{state.error&&<p className="content-error" role="alert">{state.error}</p>}{state.notice&&<p className="admin-notice" role="status">{state.notice}</p>}<button className="primary" disabled={state.busy}>{state.busy?(language==='en'?'Sending…':'पाठवत आहे…'):t.send}</button></form>
     </div>
   </PageLayout>
 }

@@ -18,12 +18,17 @@ import NewsAdmin from './pages/admin/NewsAdmin'
 import EventAdmin from './pages/admin/EventAdmin'
 import GalleryAdmin from './pages/admin/GalleryAdmin'
 import HeroAdmin from './pages/admin/HeroAdmin'
+import AdminCrudPage from './pages/admin/AdminCrudPage'
+import AccountAdmin from './pages/admin/AccountAdmin'
+import EnquiriesAdmin from './pages/admin/EnquiriesAdmin'
+import AnnouncementsPage from './pages/Announcements'
 
 const pageRoutes={
   '/':language=><HomePage language={language}/>,
   '/about':language=><ContentPage type="about" language={language}/>,
   '/committee':language=><ContentPage type="committee" language={language}/>,
   '/projects':language=><ContentPage type="projects" language={language}/>,
+  '/announcements':language=><AnnouncementsPage language={language}/>,
   '/news':language=><NewsPage language={language}/>,
   '/events':language=><EventsPage language={language}/>,
   '/gallery':language=><GalleryPage language={language}/>,
@@ -33,7 +38,11 @@ const pageRoutes={
 }
 
 const adminRoutes={
+  '/admin':<AdminDashboard/>,
   '/admin/dashboard':<AdminDashboard/>,
+  '/admin/announcements':<AdminCrudPage section="announcements"/>,
+  '/admin/account':<AccountAdmin/>,
+  '/admin/enquiries':<EnquiriesAdmin/>,
   '/admin/news':<NewsAdmin/>,
   '/admin/events':<EventAdmin/>,
   '/admin/gallery':<GalleryAdmin/>,
@@ -46,7 +55,7 @@ export default function App(){
 
   if(path==='/principal/bonafide') return <BonafidePage/>
   if(path==='/admin/login') return <AdminLogin/>
-  if(adminRoutes[path]) return <AdminGuard><AdminLayout>{adminRoutes[path]}</AdminLayout></AdminGuard>
+  if(adminRoutes[path]) return <AdminGuard><AdminLayout><div key={path}>{adminRoutes[path]}</div></AdminLayout></AdminGuard>
   if(path.startsWith('/admin/')) return <NotFoundPage language={language}/>
 
   const changeLanguage=nextLanguage=>{
@@ -58,9 +67,9 @@ export default function App(){
     ?renderPage(language)
     :<NotFoundPage language={language}/>
 
-  return <>
+  return <div className="public-site">
     <Navbar language={language} setLanguage={changeLanguage}/>
     {page}
     <Footer language={language}/>
-  </>
+  </div>
 }
