@@ -6,11 +6,14 @@ import {join} from 'node:path'
 import {once} from 'node:events'
 import {randomUUID} from 'node:crypto'
 import {createApp} from '../bhide_wada_backend/app.js'
-import {hashPassword,verifyPassword,openStore} from '../bhide_wada_backend/store.js'
+import {hashPassword,verifyPassword} from '../bhide_wada_backend/store.js'
+import {createRepository} from '../bhide_wada_backend/repository.js'
 
 const origin='http://127.0.0.1:5174'
 const initialPassword='Local-test-password-2026!'
-let directory,db,server,base,cookie,newsId
+const mongoUri=process.env.TEST_MONGODB_URI
+const dbName=`bhide_wada_test_${randomUUID().replaceAll('-','').slice(0,16)}`
+let directory,db,store,server,base,cookie,newsId
 async function call(path,{method='GET',body,auth=true,requestOrigin=origin,headers={}}={}){
   const options={method,headers:{Origin:requestOrigin,...(auth&&cookie?{Cookie:cookie}:{}),...headers}}
   if(body instanceof FormData)options.body=body
@@ -32,14 +35,20 @@ function form(values,file){
 }
 before(async()=>{
   directory=await mkdtemp(join(tmpdir(),'bhide-admin-test-'))
-  const result=await createApp({dataDir:directory,origins:[origin],maxUploadMB:1})
+  const result=await createApp({dataDir:directory,origins:[origin],maxUploadMB:1,mongoUri,dbName})
   db=result.db
-  db.prepare('INSERT INTO admins VALUES(?,?,?)').run(randomUUID(),'admin',await hashPassword(initialPassword))
+  store=result.store
+  await store.createAdmin({id:randomUUID(),username:'admin',password:await hashPassword(initialPassword)})
   server=result.app.listen(0,'127.0.0.1')
   await once(server,'listening')
   base=`http://127.0.0.1:${server.address().port}`
 })
-after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));db?.close();if(directory)await rm(directory,{recursive:true,force:true})})
+after(async()=>{
+  if(server)await new Promise(resolve=>server.close(resolve))
+  if(store?.kind==='mongodb'&&dbName.startsWith('bhide_wada_test_'))await db.dropDatabase()
+  await store?.close()
+  if(directory)await rm(directory,{recursive:true,force:true})
+})
 
 test('public health works; content and administrative endpoints require authentication',async()=>{
   assert.equal((await call('/health',{auth:false})).data.status,'ok')
@@ -59,9 +68,9 @@ test('login rejects untrusted origins and wrong passwords; sets an HTTP-only coo
   assert.match(raw,/SameSite=Lax/)
   assert.match(raw,/Path=\/api/)
   assert.equal((await call('/admin/session')).data.authenticated,true)
-  const stored=db.prepare('SELECT token FROM sessions').get().token
+  const stored=mongoUri?(await db.collection('bw_sessions').findOne({}))._id:db.prepare('SELECT token FROM sessions').get().token
   assert.notEqual(stored,cookie.split('=')[1])
-  assert.equal(db.prepare('SELECT password FROM admins').get().password.includes(initialPassword),false)
+  assert.equal((await store.findAdmin({username:'admin'})).password.includes(initialPassword),false)
 })
 test('news CRUD validates input, separates drafts from published content and records activity',async()=>{
   assert.equal((await call('/admin/news',{method:'POST',body:{title:''}})).response.status,400)
@@ -145,15 +154,15 @@ test('contact enquiries are validated, private, and support inbox status changes
   assert.equal((await call('/admin/overview')).data.enquiries.unread,0)
   assert.equal((await call(`/admin/enquiries/${item._id}`,{method:'DELETE'})).response.status,200)
 })
-test('overview counts and audit log match saved content; content persists in SQLite',async()=>{
+test('overview counts and audit log match saved content; content persists across database connections',async()=>{
   const overview=(await call('/admin/overview')).data
   assert.equal(overview.counts.news.total,1)
   assert.equal(overview.counts.announcements.total,4)
   assert.ok(overview.activity.some(item=>item.section==='news'&&item.action==='updated'))
   assert.equal(JSON.stringify(overview).includes(initialPassword),false)
-  const second=openStore(join(directory,'admin.sqlite'))
-  assert.equal(JSON.parse(second.db.prepare('SELECT payload FROM content WHERE id=?').get(newsId).payload).title,'Published news')
-  second.db.close()
+  const second=await createRepository({dataDir:directory,mongoUri,dbName})
+  assert.equal((await second.getContent(newsId,'news')).title,'Published news')
+  await second.close()
 })
 test('password changes require the old password and revoke previous sessions',async()=>{
   const oldCookie=cookie
@@ -166,13 +175,14 @@ test('password changes require the old password and revoke previous sessions',as
   assert.equal((await call('/admin/session')).data.authenticated,true)
   assert.equal((await login(initialPassword)).response.status,401)
   assert.equal((await login('A-new-secure-password!')).response.status,200)
-  assert.ok(await verifyPassword('A-new-secure-password!',db.prepare('SELECT password FROM admins').get().password))
+  assert.ok(await verifyPassword('A-new-secure-password!',(await store.findAdmin({username:'admin'})).password))
 })
 test('logout and expiry deny further access',async()=>{
   assert.equal((await call('/admin/logout',{method:'POST'})).response.status,200)
   assert.equal((await call('/admin/overview')).response.status,401)
   await login('A-new-secure-password!')
-  db.prepare('UPDATE sessions SET expires=0').run()
+  if(mongoUri)await db.collection('bw_sessions').updateMany({},{$set:{expiresAt:new Date(0)}})
+  else db.prepare('UPDATE sessions SET expires=0').run()
   assert.equal((await call('/admin/overview')).response.status,401)
 })
 test('login rate limiting caps repeated failures',async()=>{
@@ -183,7 +193,7 @@ test('login rate limiting caps repeated failures',async()=>{
 
 test('production serves the built SPA and issues secure cookies with security headers',async()=>{
   const productionOrigin='https://bhide.example'
-  const production=await createApp({dataDir:directory,origins:[productionOrigin],production:true,serveFrontend:true})
+  const production=await createApp({dataDir:directory,origins:[productionOrigin],production:true,serveFrontend:true,mongoUri,dbName})
   const listener=production.app.listen(0,'127.0.0.1')
   await once(listener,'listening')
   const host=`http://127.0.0.1:${listener.address().port}`
@@ -200,5 +210,5 @@ test('production serves the built SPA and issues secure cookies with security he
     const missing=await fetch(`${host}/api/unknown`)
     assert.equal(missing.status,404)
     assert.match(missing.headers.get('content-type'),/application\/json/)
-  }finally{await new Promise(resolve=>listener.close(resolve));production.db.close()}
+  }finally{await new Promise(resolve=>listener.close(resolve));await production.store.close()}
 })

@@ -5,7 +5,8 @@ import {mkdirSync,existsSync} from 'node:fs'
 import {open,rename,unlink} from 'node:fs/promises'
 import {resolve,join} from 'node:path'
 import {randomUUID,randomBytes,createHash} from 'node:crypto'
-import {openStore,hashPassword,verifyPassword} from './store.js'
+import {hashPassword,verifyPassword} from './store.js'
+import {createRepository} from './repository.js'
 
 const types=['announcements','news','events','gallery','hero']
 const fields={announcements:['title','summary','content','link','expiresAt'],news:['title','summary','content'],events:['title','summary','content','date','location'],gallery:['title','description'],hero:['title','altText']}
@@ -13,7 +14,6 @@ const sha=value=>createHash('sha256').update(value).digest('hex')
 const fail=(status,message)=>Object.assign(new Error(message),{status})
 const now=()=>new Date().toISOString()
 const bool=(value,fallback)=>value===undefined?fallback:value===true||value==='true'
-const parse=row=>JSON.parse(row.payload)
 function safeLink(value){
   if(/[\u0000-\u0020\u007f]/.test(value))throw fail(400,'Links cannot contain spaces or control characters.')
   if(value.startsWith('/')&&!value.startsWith('//')&&!value.includes('\\'))return value
@@ -48,8 +48,9 @@ async function inspectMedia(file,hero){
   return kind
 }
 
-export async function createApp({dataDir=resolve('.data'),origins=['http://127.0.0.1:5173','http://127.0.0.1:5174','http://localhost:5173','http://localhost:5174'],production=false,serveFrontend=false,maxUploadMB=50}={}){
-  const {db,transaction,audit}=openStore(join(dataDir,'admin.sqlite'))
+export async function createApp({dataDir=resolve('.data'),origins=['http://127.0.0.1:5173','http://127.0.0.1:5174','http://localhost:5173','http://localhost:5174'],production=false,serveFrontend=false,maxUploadMB=50,mongoUri,dbName='bhide_wada'}={}){
+  const store=await createRepository({dataDir,mongoUri,dbName})
+  const db=store.db
   const uploads=join(dataDir,'uploads')
   mkdirSync(uploads,{recursive:true,mode:0o700})
   const app=express()
@@ -76,19 +77,18 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
     const value=(req.headers.cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith(`${cookieName}=`))?.slice(cookieName.length+1)
     return /^[a-f0-9]{64}$/.test(value||'')?value:''
   }
-  const session=req=>{
+  const session=async req=>{
     const token=readToken(req)
-    return token?db.prepare('SELECT admins.id, admins.username FROM sessions JOIN admins ON admins.id=sessions.admin_id WHERE token=? AND expires>?').get(sha(token),Date.now()):null
+    return token?store.findSession(sha(token),Date.now()):null
   }
-  const requireAdmin=(req,res,next)=>{
-    const admin=session(req)
+  const requireAdmin=async(req,res,next)=>{
+    const admin=await session(req)
     if(!admin)return next(fail(401,'Your session has expired. Please sign in.'))
     req.admin=admin;next()
   }
-  const issueSession=(admin,res)=>{
+  const issueSession=async(admin,res)=>{
     const token=randomBytes(32).toString('hex')
-    db.prepare('DELETE FROM sessions WHERE expires<=?').run(Date.now())
-    db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(sha(token),admin.id,Date.now()+cookieOptions.maxAge)
+    await store.createSession(sha(token),admin.id,Date.now()+cookieOptions.maxAge)
     res.cookie(cookieName,token,cookieOptions)
   }
   const attempts=new Map()
@@ -101,23 +101,23 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
   }
   const dummyHash=await hashPassword(randomBytes(32).toString('hex'))
   app.get('/api/health',(req,res)=>res.json({status:'ok'}))
-  app.get('/api/admin/session',(req,res)=>{
-    const admin=session(req)
+  app.get('/api/admin/session',async(req,res)=>{
+    const admin=await session(req)
     res.json({authenticated:Boolean(admin),user:admin?{username:admin.username}:null})
   })
   app.post('/api/admin/login',async(req,res)=>{
     limited(`login:${req.ip}`,10,15*60*1000)
     const {username,password}=req.body||{}
     if(typeof username!=='string'||typeof password!=='string'||username.length>80||password.length>256)throw fail(400,'Enter a valid username and password.')
-    const admin=db.prepare('SELECT * FROM admins WHERE username=?').get(username.trim())
+    const admin=await store.findAdmin({username:username.trim()})
     const correct=await verifyPassword(password,admin?.password||dummyHash)
     if(!admin||!correct)throw fail(401,'Invalid username or password.')
-    issueSession(admin,res)
-    audit(admin.username,'signed in','account','Admin login')
+    await issueSession(admin,res)
+    await store.recordActivity(admin.username,'signed in','account','Admin login')
     res.json({authenticated:true,user:{username:admin.username}})
   })
-  app.post('/api/admin/logout',requireAdmin,(req,res)=>{
-    db.prepare('DELETE FROM sessions WHERE token=?').run(sha(readToken(req)))
+  app.post('/api/admin/logout',requireAdmin,async(req,res)=>{
+    await store.deleteSession(sha(readToken(req)))
     res.clearCookie(cookieName,{...cookieOptions,maxAge:undefined})
     res.json({message:'Signed out.'})
   })
@@ -125,46 +125,45 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
     limited(`password:${req.admin.id}`,10,15*60*1000)
     const {currentPassword,newPassword}=req.body||{}
     if(typeof newPassword!=='string'||newPassword.length<14||newPassword.length>256)throw fail(400,'Use a new password between 14 and 256 characters.')
-    const admin=db.prepare('SELECT * FROM admins WHERE id=?').get(req.admin.id)
+    const admin=await store.findAdmin({id:req.admin.id})
     if(!await verifyPassword(currentPassword,admin.password))throw fail(400,'Current password is incorrect.')
     if(currentPassword===newPassword)throw fail(400,'Choose a different password.')
     const hashed=await hashPassword(newPassword)
-    transaction(()=>{
-      db.prepare('UPDATE admins SET password=? WHERE id=?').run(hashed,admin.id)
-      db.prepare('DELETE FROM sessions WHERE admin_id=?').run(admin.id)
-      audit(admin.username,'changed password','account','Password changed; previous sessions revoked')
-    })
-    issueSession(admin,res)
+    await store.changePassword(admin,hashed)
+    await issueSession(admin,res)
     res.json({message:'Password changed. Other sessions have been signed out.'})
   })
-  const list=type=>db.prepare('SELECT payload FROM content WHERE type=? ORDER BY rowid DESC').all(type).map(parse)
-  app.get('/api/admin/overview',requireAdmin,(req,res)=>{
-    const counts=Object.fromEntries(types.map(type=>{const items=list(type);return [type,{total:items.length,published:items.filter(item=>item.published&&(type!=='hero'||item.active)).length}]}))
-    const enquiries=db.prepare('SELECT payload FROM enquiries').all().map(parse)
-    res.json({counts,enquiries:{total:enquiries.length,unread:enquiries.filter(item=>item.status==='new').length},activity:db.prepare('SELECT id,actor,action,section,title,created_at AS createdAt FROM activity ORDER BY rowid DESC LIMIT 20').all(),user:{username:req.admin.username}})
+  const list=type=>store.listContent(type)
+  app.get('/api/admin/overview',requireAdmin,async(req,res)=>{
+    const entries=await Promise.all(types.map(async type=>{
+      const items=await list(type)
+      return [type,{total:items.length,published:items.filter(item=>item.published&&(type!=='hero'||item.active)).length}]
+    }))
+    const enquiries=await store.listEnquiries()
+    res.json({counts:Object.fromEntries(entries),enquiries:{total:enquiries.length,unread:enquiries.filter(item=>item.status==='new').length},activity:await store.recentActivity(),user:{username:req.admin.username}})
   })
-  app.get('/api/admin/enquiries',requireAdmin,(req,res)=>res.json({items:db.prepare('SELECT payload FROM enquiries ORDER BY rowid DESC').all().map(parse)}))
-  app.patch('/api/admin/enquiries/:id',requireAdmin,(req,res)=>{
-    const row=db.prepare('SELECT payload FROM enquiries WHERE id=?').get(req.params.id)
-    if(!row)throw fail(404,'Enquiry not found.')
+  app.get('/api/admin/enquiries',requireAdmin,async(req,res)=>res.json({items:await store.listEnquiries()}))
+  app.patch('/api/admin/enquiries/:id',requireAdmin,async(req,res)=>{
+    const existing=await store.getEnquiry(req.params.id)
+    if(!existing)throw fail(404,'Enquiry not found.')
     if(!['new','read','resolved'].includes(req.body?.status))throw fail(400,'Choose a valid enquiry status.')
-    const item={...parse(row),status:req.body.status,updatedAt:now()}
-    transaction(()=>{db.prepare('UPDATE enquiries SET payload=? WHERE id=?').run(JSON.stringify(item),item._id);audit(req.admin.username,'updated','enquiries',item.name)})
+    const item={...existing,status:req.body.status,updatedAt:now()}
+    await store.updateEnquiry(item,req.admin.username)
     res.json({item})
   })
-  app.delete('/api/admin/enquiries/:id',requireAdmin,(req,res)=>{
-    const row=db.prepare('SELECT payload FROM enquiries WHERE id=?').get(req.params.id)
-    if(!row)throw fail(404,'Enquiry not found.')
-    transaction(()=>{db.prepare('DELETE FROM enquiries WHERE id=?').run(req.params.id);audit(req.admin.username,'deleted','enquiries',parse(row).name)})
+  app.delete('/api/admin/enquiries/:id',requireAdmin,async(req,res)=>{
+    const item=await store.getEnquiry(req.params.id)
+    if(!item)throw fail(404,'Enquiry not found.')
+    await store.deleteEnquiry(item,req.admin.username)
     res.json({message:'Enquiry deleted.'})
   })
-  app.post('/api/enquiries',(req,res)=>{
+  app.post('/api/enquiries',async(req,res)=>{
     limited(`contact:${req.ip}`,5,15*60*1000)
     const body=req.body||{}
     const item=Object.fromEntries(['name','phone','email','message'].map(field=>[field,typeof body[field]==='string'?body[field].trim():'']))
     if(item.name.length<2||item.name.length>100||(!/^\+?[\d ()-]{7,20}$/.test(item.phone)||item.phone.replace(/\D/g,'').length<7||item.phone.replace(/\D/g,'').length>15)||item.email.length>254||(item.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item.email))||item.message.length>5000)throw fail(400,'Enter a name, valid phone number, and valid email if provided. Keep the message under 5000 characters.')
     Object.assign(item,{_id:randomUUID(),status:'new',createdAt:now()})
-    db.prepare('INSERT INTO enquiries VALUES(?,?)').run(item._id,JSON.stringify(item))
+    await store.insertEnquiry(item)
     res.status(201).json({message:'Your enquiry has been received.'})
   })
   app.get('/api/media/:filename',(req,res,next)=>{
@@ -173,8 +172,8 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
     res.sendFile(req.params.filename,{root:uploads},error=>{if(error&&!res.headersSent)next(fail(error.status||500,'Media not found.'))})
   })
   const validateType=(req,res,next)=>types.includes(req.params.type)?next():next(fail(404,'Content section not found.'))
-  app.get('/api/:type',validateType,(req,res)=>res.json({items:list(req.params.type).filter(item=>item.published&&(req.params.type!=='hero'||item.active)&&(!item.expiresAt||new Date(item.expiresAt)>new Date())).sort((a,b)=>Number(b.pinned||false)-Number(a.pinned||false))}))
-  app.get('/api/admin/:type',requireAdmin,validateType,(req,res)=>res.json({items:list(req.params.type)}))
+  app.get('/api/:type',validateType,async(req,res)=>res.json({items:(await list(req.params.type)).filter(item=>item.published&&(req.params.type!=='hero'||item.active)&&(!item.expiresAt||new Date(item.expiresAt)>new Date())).sort((a,b)=>Number(b.pinned||false)-Number(a.pinned||false))}))
+  app.get('/api/admin/:type',requireAdmin,validateType,async(req,res)=>res.json({items:await list(req.params.type)}))
   const cleanup=async url=>{
     if(typeof url==='string'&&/^\/api\/media\/[a-f0-9-]{36}\.(png|jpg|gif|webp|mp4|webm)$/.test(url))await unlink(join(uploads,url.split('/').at(-1))).catch(error=>{if(error.code!=='ENOENT')console.error('Media cleanup failed:',error.code)})
   }
@@ -183,7 +182,7 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
     try{
       const type=req.params.type
       let old
-      if(req.params.id){const row=db.prepare('SELECT payload FROM content WHERE id=? AND type=?').get(req.params.id,type);if(!row)throw fail(404,'Record not found.');old=parse(row)}
+      if(req.params.id){old=await store.getContent(req.params.id,type);if(!old)throw fail(404,'Record not found.')}
       const body=req.body||{}
       const data={}
       for(const field of fields[type]){
@@ -215,10 +214,7 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
       if(['hero','gallery'].includes(type)&&!media.mediaUrl)throw fail(400,'An image or video is required.')
       if(type==='hero'&&media.mediaResourceType!=='image')throw fail(400,'Hero slides must be images.')
       const item={...data,...media,_id:old?._id||randomUUID(),createdAt:old?.createdAt||now(),updatedAt:now()}
-      transaction(()=>{
-        db.prepare('INSERT INTO content VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(item._id,type,JSON.stringify(item))
-        audit(req.admin.username,old?'updated':'created',type,item.title)
-      })
+      await store.saveContent(type,item,req.admin.username,old?'updated':'created')
       if(old?.mediaUrl!==item.mediaUrl)await cleanup(old?.mediaUrl)
       res.status(old?200:201).json({item})
     }catch(error){
@@ -230,10 +226,9 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
   app.post('/api/admin/:type',requireAdmin,validateType,upload.single('media'),save)
   app.put('/api/admin/:type/:id',requireAdmin,validateType,upload.single('media'),save)
   app.delete('/api/admin/:type/:id',requireAdmin,validateType,async(req,res)=>{
-    const row=db.prepare('SELECT payload FROM content WHERE id=? AND type=?').get(req.params.id,req.params.type)
-    if(!row)throw fail(404,'Record not found.')
-    const item=parse(row)
-    transaction(()=>{db.prepare('DELETE FROM content WHERE id=?').run(item._id);audit(req.admin.username,'deleted',req.params.type,item.title)})
+    const item=await store.getContent(req.params.id,req.params.type)
+    if(!item)throw fail(404,'Record not found.')
+    await store.deleteContent(req.params.type,item,req.admin.username)
     await cleanup(item.mediaUrl)
     res.json({message:'Record deleted.'})
   })
@@ -246,8 +241,8 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
   app.use((error,req,res,next)=>{
     if(res.headersSent)return next(error)
     const status=error instanceof multer.MulterError?400:error.status||500
-    if(status>=500)console.error('Server error:',error.message)
+    if(status>=500)console.error('Server request failed:',error.name||'Error')
     res.status(status).json({message:error instanceof multer.MulterError?(error.code==='LIMIT_FILE_SIZE'?`Media must be under ${maxUploadMB} MB.`:'Invalid upload. Choose one media file.'):status>=500?'The server could not complete your request.':error.message})
   })
-  return {app,db}
+  return {app,db,store}
 }
