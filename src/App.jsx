@@ -1,6 +1,7 @@
 import {useState} from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
+import Dignitaries from './components/Dignitaries'
 import {usePath} from './components/RouterLink'
 import HomePage from './pages/HomePage'
 import {ContactPage,ContentPage} from './pages/ContentPages'
@@ -69,6 +70,7 @@ export default function App(){
 
   return <div className="public-site">
     <Navbar language={language} setLanguage={changeLanguage}/>
+    <Dignitaries language={language}/>
     {page}
     <Footer language={language}/>
   </div>
