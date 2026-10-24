@@ -9,7 +9,7 @@ import {hashPassword,verifyPassword} from './store.js'
 import {createRepository} from './repository.js'
 
 const types=['announcements','news','events','gallery','hero']
-const fields={announcements:['title','summary','content','link','expiresAt'],news:['title','summary','content'],events:['title','summary','content','date','location'],gallery:['title','description'],hero:['title','altText']}
+const fields={announcements:['title','summary','content','link','expiresAt'],news:['title','summary','content','sourceUrl'],events:['title','summary','content','date','location'],gallery:['title','description','capturedAt','sourceUrl'],hero:['title','altText']}
 const sha=value=>createHash('sha256').update(value).digest('hex')
 const fail=(status,message)=>Object.assign(new Error(message),{status})
 const now=()=>new Date().toISOString()
@@ -55,6 +55,9 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
   mkdirSync(uploads,{recursive:true,mode:0o700})
   const app=express()
   app.disable('x-powered-by')
+  // The supplied Nginx proxy connects over loopback. Trust only that local
+  // proxy so req.ip uses the visitor address, not the proxy's shared address.
+  app.set('trust proxy','loopback')
   app.use((req,res,next)=>{
     res.set({'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'strict-origin-when-cross-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=()'})
     if(production)res.set('Strict-Transport-Security','max-age=31536000')
@@ -134,10 +137,11 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
     res.json({message:'Password changed. Other sessions have been signed out.'})
   })
   const list=type=>store.listContent(type)
+  const isPublic=(item,type)=>item.published&&(type!=='hero'||item.active)&&(!item.expiresAt||new Date(item.expiresAt)>new Date())
   app.get('/api/admin/overview',requireAdmin,async(req,res)=>{
     const entries=await Promise.all(types.map(async type=>{
       const items=await list(type)
-      return [type,{total:items.length,published:items.filter(item=>item.published&&(type!=='hero'||item.active)).length}]
+      return [type,{total:items.length,published:items.filter(item=>isPublic(item,type)).length}]
     }))
     const enquiries=await store.listEnquiries()
     res.json({counts:Object.fromEntries(entries),enquiries:{total:enquiries.length,unread:enquiries.filter(item=>item.status==='new').length},activity:await store.recentActivity(),user:{username:req.admin.username}})
@@ -172,7 +176,7 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
     res.sendFile(req.params.filename,{root:uploads},error=>{if(error&&!res.headersSent)next(fail(error.status||500,'Media not found.'))})
   })
   const validateType=(req,res,next)=>types.includes(req.params.type)?next():next(fail(404,'Content section not found.'))
-  app.get('/api/:type',validateType,async(req,res)=>res.json({items:(await list(req.params.type)).filter(item=>item.published&&(req.params.type!=='hero'||item.active)&&(!item.expiresAt||new Date(item.expiresAt)>new Date())).sort((a,b)=>Number(b.pinned||false)-Number(a.pinned||false))}))
+  app.get('/api/:type',validateType,async(req,res)=>res.json({items:(await list(req.params.type)).filter(item=>isPublic(item,req.params.type)).sort((a,b)=>Number(b.pinned||false)-Number(a.pinned||false))}))
   app.get('/api/admin/:type',requireAdmin,validateType,async(req,res)=>res.json({items:await list(req.params.type)}))
   const cleanup=async url=>{
     if(typeof url==='string'&&/^\/api\/media\/[a-f0-9-]{36}\.(png|jpg|gif|webp|mp4|webm)$/.test(url))await unlink(join(uploads,url.split('/').at(-1))).catch(error=>{if(error.code!=='ENOENT')console.error('Media cleanup failed:',error.code)})
@@ -199,6 +203,14 @@ export async function createApp({dataDir=resolve('.data'),origins=['http://127.0
         data.date=new Date(data.date).toISOString()
       }
       if(data.link)data.link=safeLink(data.link)
+      if(data.sourceUrl){
+        data.sourceUrl=safeLink(data.sourceUrl)
+        if(!data.sourceUrl.startsWith('https://'))throw fail(400,'Source links must use HTTPS.')
+      }
+      if(data.capturedAt){
+        const date=new Date(data.capturedAt)
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(data.capturedAt)||Number.isNaN(date.getTime())||date.toISOString().slice(0,10)!==data.capturedAt)throw fail(400,'Choose a valid date when the photograph or video was taken.')
+      }
       if(data.expiresAt){if(Number.isNaN(Date.parse(data.expiresAt)))throw fail(400,'Choose a valid expiry date.');data.expiresAt=new Date(data.expiresAt).toISOString()}
       data.published=bool(body.published,old?.published??true)
       if(type==='hero')data.active=bool(body.active,old?.active??true)

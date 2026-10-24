@@ -75,7 +75,7 @@ test('login rejects untrusted origins and wrong passwords; sets an HTTP-only coo
 test('news CRUD validates input, separates drafts from published content and records activity',async()=>{
   assert.equal((await call('/admin/news',{method:'POST',body:{title:''}})).response.status,400)
   assert.equal((await call('/admin/news',{method:'POST',body:{title:'x'.repeat(201)}})).response.status,400)
-  const created=await call('/admin/news',{method:'POST',body:form({title:'पहिली बातमी',summary:'News summary',content:'Committee update',published:false})})
+  const created=await call('/admin/news',{method:'POST',body:form({title:'पहिली बातमी',summary:'News summary',content:'Committee update',sourceUrl:'https://example.com/verified-report',published:false})})
   assert.equal(created.response.status,201)
   newsId=created.data.item._id
   assert.equal((await call('/news',{auth:false})).data.items.length,0)
@@ -83,6 +83,8 @@ test('news CRUD validates input, separates drafts from published content and rec
   const updated=await call(`/admin/news/${newsId}`,{method:'PUT',body:form({title:'Published news',published:true})})
   assert.equal(updated.response.status,200)
   assert.equal(updated.data.item.content,'Committee update')
+  assert.equal(updated.data.item.sourceUrl,'https://example.com/verified-report')
+  assert.equal((await call('/admin/news',{method:'POST',body:{title:'Unsafe source',sourceUrl:'javascript:alert(1)'}})).response.status,400)
   assert.equal((await call('/news',{auth:false})).data.items[0].title,'Published news')
   assert.equal((await call(`/admin/news/${newsId}`,{method:'PUT',requestOrigin:'https://untrusted.example',body:{title:'Forged'}})).response.status,403)
   assert.equal((await call(`/admin/gallery/${newsId}`,{method:'DELETE'})).response.status,404)
@@ -99,6 +101,36 @@ test('announcements support publication, pinning, expiry and safe links',async()
   await create({title:'Draft notice',published:false})
   const items=(await call('/announcements',{auth:false})).data.items
   assert.deepEqual(items.map(item=>item.title),['Pinned notice','Normal notice'])
+  const overview=(await call('/admin/overview')).data
+  assert.equal(overview.counts.announcements.total,4)
+  assert.equal(overview.counts.announcements.published,items.length)
+})
+test('dashboard uploads appear on public news, announcement and gallery feeds only while published',async()=>{
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jS1kAAAAASUVORK5CYII=','base64')
+  // A minimal MP4 header exercises upload classification and byte serving.
+  const mp4=Buffer.concat([Buffer.from([0,0,0,24]),Buffer.from('ftypisom'),Buffer.alloc(20)])
+  for(const section of ['news','announcements','gallery']){
+    for(const [resource,bytes,mime] of [['image',png,'image/png'],['video',mp4,'video/mp4']]){
+      const values={title:`${section} ${resource}`,content:'Published details',description:'Gallery caption',published:false}
+      const created=await call(`/admin/${section}`,{method:'POST',body:form(values,{bytes,type:mime,name:resource==='image'?'photo.png':'clip.mp4'})})
+      assert.equal(created.response.status,201)
+      const item=created.data.item
+      assert.equal(item.mediaResourceType,resource)
+      assert.equal((await call(`/${section}`,{auth:false})).data.items.some(record=>record._id===item._id),false)
+      await call(`/admin/${section}/${item._id}`,{method:'PUT',body:{published:true}})
+      const published=(await call(`/${section}`,{auth:false})).data.items.find(record=>record._id===item._id)
+      assert.equal(published.title,values.title)
+      assert.equal(published.mediaUrl,item.mediaUrl)
+      assert.equal(published.mediaResourceType,resource)
+      const media=await fetch(`${base}${published.mediaUrl}`)
+      assert.equal(media.headers.get('content-type'),mime)
+      assert.deepEqual(Buffer.from(await media.arrayBuffer()),bytes)
+      await call(`/admin/${section}/${item._id}`,{method:'PUT',body:{published:false}})
+      assert.equal((await call(`/${section}`,{auth:false})).data.items.some(record=>record._id===item._id),false)
+      await call(`/admin/${section}/${item._id}`,{method:'DELETE'})
+      assert.equal((await fetch(`${base}${item.mediaUrl}`)).status,404)
+    }
+  }
 })
 test('events require valid dates and locations',async()=>{
   assert.equal((await call('/admin/events',{method:'POST',body:{title:'Event',date:'invalid',location:'Pune'}})).response.status,400)
@@ -126,9 +158,19 @@ test('gallery supports validated uploads, replacements, cleanup and media URLs',
   assert.equal((await readdir(join(directory,'uploads'))).length,1)
   assert.equal((await call(`/admin/gallery/${created.data.item._id}`,{method:'DELETE'})).response.status,200)
   assert.equal((await readdir(join(directory,'uploads'))).length,0)
-  const youtube=await call('/admin/gallery',{method:'POST',body:form({title:'Video',mediaSourceUrl:'https://www.youtube.com/watch?v=dQw4w9WgXcQ',mediaSourceType:'video'})})
+  const youtube=await call('/admin/gallery',{method:'POST',body:form({title:'Video',mediaSourceUrl:'https://www.youtube.com/watch?v=dQw4w9WgXcQ',mediaSourceType:'video',capturedAt:'2026-10-22',sourceUrl:'https://example.com/photographer'})})
   assert.equal(youtube.response.status,201)
   assert.equal(youtube.data.item.mediaUrl,'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ')
+  const preserved=await call(`/admin/gallery/${youtube.data.item._id}`,{method:'PUT',body:{title:'Verified site video'}})
+  assert.equal(preserved.data.item.capturedAt,'2026-10-22')
+  assert.equal(preserved.data.item.sourceUrl,'https://example.com/photographer')
+  const publicVideo=(await call('/gallery',{auth:false})).data.items.find(item=>item._id===youtube.data.item._id)
+  assert.equal(publicVideo.capturedAt,'2026-10-22')
+  assert.equal(publicVideo.sourceUrl,'https://example.com/photographer')
+  for(const capturedAt of ['2026-02-30','2026-13-01','not-a-date','2026-10-22T00:00:00Z']){
+    assert.equal((await call(`/admin/gallery/${youtube.data.item._id}`,{method:'PUT',body:{capturedAt}})).response.status,400)
+  }
+  assert.equal((await call(`/admin/gallery/${youtube.data.item._id}`,{method:'PUT',body:{sourceUrl:'/unverified'}})).response.status,400)
   assert.equal((await call('/admin/gallery',{method:'POST',body:{title:'Invalid URL',mediaSourceUrl:'http://example.com/file.png',mediaSourceType:'image'}})).response.status,400)
   assert.equal((await call('/admin/gallery',{method:'POST',body:{title:'Missing media'}})).response.status,400)
 })
@@ -155,6 +197,7 @@ test('contact enquiries are validated, private, and support inbox status changes
   assert.equal((await call(`/admin/enquiries/${item._id}`,{method:'DELETE'})).response.status,200)
 })
 test('overview counts and audit log match saved content; content persists across database connections',async()=>{
+  await call(`/admin/news/${newsId}`,{method:'PUT',body:{title:'Published news'}})
   const overview=(await call('/admin/overview')).data
   assert.equal(overview.counts.news.total,1)
   assert.equal(overview.counts.announcements.total,4)
@@ -189,6 +232,34 @@ test('login rate limiting caps repeated failures',async()=>{
   let status
   for(let i=0;i<12;i++)status=(await login('wrong')).response.status
   assert.equal(status,429)
+})
+
+test('local proxy keeps visitor rate limits separate and ignores forged earlier forwarded addresses',async()=>{
+  const proxied=await createApp({dataDir:directory,origins:[origin],mongoUri,dbName})
+  const trust=proxied.app.get('trust proxy fn')
+  assert.equal(trust('127.0.0.1'),true)
+  assert.equal(trust('::1'),true)
+  assert.equal(trust('203.0.113.10'),false)
+  assert.equal(trust('10.0.0.1'),false)
+  const listener=proxied.app.listen(0,'127.0.0.1')
+  await once(listener,'listening')
+  const host=`http://127.0.0.1:${listener.address().port}`
+  const attempt=(path,forwarded)=>fetch(`${host}/api${path}`,{
+    method:'POST',
+    headers:{Origin:origin,'Content-Type':'application/json','X-Forwarded-For':forwarded},
+    body:JSON.stringify(path==='/admin/login'?{username:'missing-proxy-test-user',password:'wrong'}:{})
+  })
+  try{
+    // The rightmost public IP is the visitor appended by Nginx; a client
+    // changing an earlier header value must not reset that visitor's limit.
+    for(const [path,limit,rejected] of [['/admin/login',10,401],['/enquiries',5,400]]){
+      for(let i=0;i<limit;i++){
+        assert.equal((await attempt(path,`198.51.100.${i+1}, 203.0.113.10`)).status,rejected)
+      }
+      assert.equal((await attempt(path,'198.51.100.100, 203.0.113.10')).status,429)
+      assert.equal((await attempt(path,'203.0.113.11')).status,rejected)
+    }
+  }finally{await new Promise(resolve=>listener.close(resolve));await proxied.store.close()}
 })
 
 test('production serves the built SPA and issues secure cookies with security headers',async()=>{

@@ -1,0 +1,18 @@
+{
+  "createdOn": "2026-10-23",
+  "tool": "Built-in image_gen",
+  "asset": "public/assets/hero/committee-banner.jpg",
+  "responsiveAssets": [
+    "public/assets/hero/committee-banner-1080.jpg",
+    "public/assets/hero/committee-banner-640.jpg"
+  ],
+  "purpose": "Illustrative committee identity banner; not a current site photograph",
+  "prompt": "Use case: ads-marketing. Asset type: professional wide website hero banner, landscape 3:1 composition, high resolution. Primary request: create a polished heritage committee banner for Bhidewada–Phulewada Rashtriya Smarak Samiti. Warm ivory parchment, deep plum and muted saffron, refined museum editorial visual language. On the right third show a dignified hand-painted historical portrait pair of Mahatma Jyotirao Phule in red turban and Krantijyoti Savitribai Phule in traditional sari, with delicate abstract traditional Maharashtrian carved timber motifs, an open book and subtle archival linework. The left two thirds must be mostly clear with generous breathing room and extremely legible carefully typeset bilingual title. Text verbatim, Marathi first in large clean Devanagari: 'भिडेवाडा–फुलेवाडा' then 'राष्ट्रीय स्मारक समिती'. Below in smaller clean English: 'Bhidewada–Phulewada Rashtriya Smarak Samiti'. Render every letter correctly, especially भिडेवाडा, फुलेवाडा, राष्ट्रीय, स्मारक, समिती. No other text, no government seals, no politicians, no invented photograph of the current memorial site or construction, no photographic building. The artwork is an illustrative homage to heritage and education, not evidence of current site conditions. Use flat clear cream background behind all title text, premium balanced composition, no watermark.",
+  "portraitCredit": {
+    "asset": "public/assets/images/dignitaries/shivaji-maharaj-valentyn.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Shivaji_Maharaj_by_Von_Valentyn.jpg",
+    "credit": "Von Valentyn / V. S. Bendrey, Wikimedia Commons",
+    "license": "Public domain (as listed on Wikimedia Commons)",
+    "changes": "Original asset retained; portrait detail shown through CSS framing"
+  }
+}

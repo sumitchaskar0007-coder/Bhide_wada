@@ -2,10 +2,10 @@ import {useEffect,useRef} from 'react'
 
 // Government portraits and designations: https://sjsa.maharashtra.gov.in/
 const people=[
-  {id:'devendra',image:'/assets/images/dignitaries/devendra-fadnavis.jpg',mr:'ना. श्री. देवेंद्र फडणवीस',en:'Shri Devendra Fadnavis',roleMr:'मा. मुख्यमंत्री, महाराष्ट्र राज्य',roleEn:'Chief Minister, Maharashtra',source:'https://sjsa.maharashtra.gov.in/'},
-  {id:'eknath',image:'/assets/images/dignitaries/eknath-shinde.jpg',mr:'ना. श्री. एकनाथ शिंदे',en:'Shri Eknath Shinde',roleMr:'मा. उपमुख्यमंत्री, महाराष्ट्र राज्य',roleEn:'Deputy Chief Minister, Maharashtra',source:'https://sjsa.maharashtra.gov.in/'},
-  {id:'sunetra',image:'/assets/images/dignitaries/sunetra-pawar.png',mr:'ना. श्रीमती सुनेत्रा पवार',en:'Smt. Sunetra Pawar',roleMr:'मा. उपमुख्यमंत्री, महाराष्ट्र राज्य',roleEn:'Deputy Chief Minister, Maharashtra',source:'https://sjsa.maharashtra.gov.in/'},
-  {id:'nilesh',image:'/assets/images/nilesh.png',mr:'श्री. निलेश गिरमे',en:'Shri Nilesh Girme',roleMr:'',roleEn:'',path:'/committee'}
+  {id:'devendra',image:'/assets/images/dignitaries/devendra-fadnavis.jpg',mr:'मा. श्री. देवेंद्रजी सरिताताई गंगाधरराव फडणवीस साहेब',en:'Shri Devendraji Saritatai Gangadharrao Fadnavis Saheb',roleMr:'मा. मुख्यमंत्री, महाराष्ट्र राज्य',roleEn:'Chief Minister, Maharashtra',source:'https://sjsa.maharashtra.gov.in/'},
+  {id:'eknath',image:'/assets/images/dignitaries/eknath-shinde.jpg',mr:'मा. श्री. एकनाथजी गंगूबाई संभाजी शिंदे',en:'Shri Eknathji Gangubai Sambhaji Shinde',roleMr:'मा. उपमुख्यमंत्री, महाराष्ट्र राज्य',roleEn:'Deputy Chief Minister, Maharashtra',source:'https://sjsa.maharashtra.gov.in/'},
+  {id:'sunetra',image:'/assets/images/dignitaries/sunetra-pawar.png',mr:'मा. श्रीमती सुनेत्राताई अजितदादा पवार',en:'Smt. Sunetratai Ajitdada Pawar',roleMr:'मा. उपमुख्यमंत्री, महाराष्ट्र राज्य',roleEn:'Deputy Chief Minister, Maharashtra',source:'https://sjsa.maharashtra.gov.in/'},
+  {id:'nilesh',image:'/assets/images/dignitaries/girme.jpeg',mr:'मा. श्री. निलेशजी राधिकाताई दशरथ गिरमे',en:'Shri Nileshji Radhikatai Dashrath Girme',roleMr:'अध्यक्ष, भिडेवाडा–फुलेवाडा राष्ट्रीय स्मारक समिती महाराष्ट्र राज्य',roleEn:'President, Bhidewada–Phulewada National Memorial Committee, Maharashtra State',path:'/committee'}
 ]
 function Portrait({person,name}){
   return <span className="dignitary-portrait"><img src={person.image} alt={name} loading="lazy" width="200" height="200"/></span>

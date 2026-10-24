@@ -1,6 +1,6 @@
-import {useEffect,useState} from 'react'
 import PageLayout from './PageLayout'
-import {getContent} from '../api/content'
+import usePublishedContent from '../hooks/usePublishedContent'
+import PublishedMedia from '../components/PublishedMedia'
 
 const copy={
   en:{title:'Gallery',intro:'Photographs and videos from Bhide Wada and community activities.',label:'Photo & video gallery',empty:'No photos or videos have been published yet.',loading:'Loading gallery…',error:'Unable to load the gallery.'},
@@ -9,15 +9,7 @@ const copy={
 
 export default function GalleryPage({language='mr'}){
   const t=copy[language]||copy.mr
-  const [state,setState]=useState({items:[],loading:true,error:''})
-
-  useEffect(()=>{
-    let active=true
-    getContent('gallery')
-      .then(({items})=>{if(active)setState({items,loading:false,error:''})})
-      .catch(error=>{if(active)setState({items:[],loading:false,error:error.message||t.error})})
-    return ()=>{active=false}
-  },[t.error])
+  const state=usePublishedContent('gallery')
 
   return <PageLayout title={t.title} intro={t.intro}>
     <section className="community-gallery">
@@ -27,13 +19,15 @@ export default function GalleryPage({language='mr'}){
       {!state.loading&&!state.error&&state.items.length===0&&<p className="gallery-empty-state">{t.empty}</p>}
       <div className="managed-gallery-grid">{state.items.map(item=><figure key={item._id}>
         <div className="gallery-media-frame">
-          {item.mediaProvider==='youtube'
-            ?<iframe src={item.mediaUrl} title={item.title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/>
-            :item.mediaResourceType==='video'
-            ?<video src={item.mediaUrl} controls preload="metadata" aria-label={item.title}/>
-            :<img src={item.mediaUrl} alt={item.description||item.title} loading="lazy"/>}
+          <PublishedMedia item={item}/>
         </div>
-        <figcaption><h3>{item.title}</h3>{item.description&&<p>{item.description}</p>}</figcaption>
+        <figcaption><h3>{item.title}</h3>{item.description&&<p>{item.description}</p>}
+          <p className="content-provenance">{item.capturedAt
+            ?<>{language==='en'?'Taken on: ':'छायाचित्र / व्हिडिओ दिनांक: '}<time dateTime={item.capturedAt}>{new Date(`${item.capturedAt}T00:00:00Z`).toLocaleDateString(language==='en'?'en-IN':'mr-IN',{dateStyle:'medium',timeZone:'UTC'})}</time></>
+            :<>{language==='en'?'Date taken not provided':'छायाचित्र / व्हिडिओ घेतल्याचा दिनांक उपलब्ध नाही'}</>}
+          </p>
+          {item.sourceUrl&&<a className="content-source" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">{language==='en'?'Source / credit ↗':'स्रोत / छायाचित्र श्रेय ↗'}</a>}
+        </figcaption>
       </figure>)}</div>
     </section>
   </PageLayout>

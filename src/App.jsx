@@ -4,12 +4,12 @@ import Footer from './components/Footer'
 import Dignitaries from './components/Dignitaries'
 import {usePath} from './components/RouterLink'
 import HomePage from './pages/HomePage'
+import PhuleWadaPage from './pages/PhuleWada'
 import {ContactPage,ContentPage} from './pages/ContentPages'
 import {DocumentsPage,MembershipPage} from './pages/CommunityPages'
 import NewsPage from './pages/News'
 import EventsPage from './pages/Events'
 import GalleryPage from './pages/Gallery'
-import BonafidePage from './pages/BonafidePage'
 import NotFoundPage from './pages/NotFoundPage'
 import AdminGuard from './pages/admin/AdminGuard'
 import AdminLayout from './pages/admin/AdminLayout'
@@ -26,6 +26,10 @@ import AnnouncementsPage from './pages/Announcements'
 
 const pageRoutes={
   '/':language=><HomePage language={language}/>,
+  '/phule-wada':language=><PhuleWadaPage language={language}/>,
+  '/phule-wada/rashtrashala':language=><PhuleWadaPage section="rashtrashala" language={language}/>,
+  '/phule-wada/vihir':language=><PhuleWadaPage section="vihir" language={language}/>,
+  '/phule-wada/hostel':language=><PhuleWadaPage section="hostel" language={language}/>,
   '/about':language=><ContentPage type="about" language={language}/>,
   '/committee':language=><ContentPage type="committee" language={language}/>,
   '/projects':language=><ContentPage type="projects" language={language}/>,
@@ -54,7 +58,6 @@ export default function App(){
   const [language,setLanguage]=useState(()=>localStorage.getItem('language')||'mr')
   const path=usePath().replace(/\/+$/,'')||'/'
 
-  if(path==='/principal/bonafide') return <BonafidePage/>
   if(path==='/admin/login') return <AdminLogin/>
   if(adminRoutes[path]) return <AdminGuard><AdminLayout><div key={path}>{adminRoutes[path]}</div></AdminLayout></AdminGuard>
   if(path.startsWith('/admin/')) return <NotFoundPage language={language}/>

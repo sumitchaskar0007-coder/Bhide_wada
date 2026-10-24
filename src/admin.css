@@ -130,3 +130,4 @@
  .admin-workspace .admin-manager h2,.admin-workspace .admin-dashboard h2 { font-size:24px; }
  .admin-login-card { padding:24px; }
 }
+.admin-page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

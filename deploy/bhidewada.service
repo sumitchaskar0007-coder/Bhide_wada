@@ -1,0 +1,23 @@
+[Unit]
+Description=Bhide Wada website and API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bhidewada
+Group=bhidewada
+WorkingDirectory=/var/www/bhidewada
+EnvironmentFile=/var/www/bhidewada/.env
+ExecStart=/usr/bin/node bhide_wada_backend/server.js
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/bhidewada
+
+[Install]
+WantedBy=multi-user.target

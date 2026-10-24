@@ -43,6 +43,8 @@ The Atlas adapter uses transactions for content/audit changes and password/sessi
 
 Content forms support browser-local drafts, record search and publication filters. Unpublished records remain accessible only through the authenticated API. The existing public page text, branding and image assets are retained.
 
+For ongoing site coverage, publish verified photographs and videos through **Gallery**, and dated reports through **News**. Gallery records support an optional date taken and HTTPS source/photographer link; news records support an optional HTTPS source link. These appear publicly so an upload date is not mistaken for the date a photograph was taken. Identify Bhidewada and Phulewada accurately, credit contributors, label archival material, and unpublish obsolete progress claims. The generated homepage banner is labelled as a heritage illustration; it is not a photograph of present site conditions. New content still requires authentic material and editorial review; no recurring publishing automation is enabled.
+
 ## Media
 
 Supported uploads: PNG, JPEG, WebP, GIF, MP4 and WebM. Hero slides accept images only. Files are checked against their content signatures and MIME type, assigned random filenames, and limited to **50 MB per file** by default (`MAX_UPLOAD_MB`). Replacing or deleting a record removes its old local media. Public media is served from `/api/media/…` with MIME sniffing disabled.
@@ -84,6 +86,8 @@ npm start
 ```
 
 Use a process manager and an HTTPS reverse proxy forwarding the website and `/api` to this Node server. It serves the `dist/` frontend with history fallback and the API on the same origin. The production frontend defaults to relative `/api` requests. `CLIENT_ORIGIN` must match the exact HTTPS website origin; comma-separated trusted origins are supported. Configure reverse-proxy request-size limits for your chosen upload limit. Production startup requires HTTPS origins.
+
+The backend trusts forwarded visitor IPs only from loopback proxies, matching the supplied Nginx configuration and `HOST=127.0.0.1`. Nginx overwrites `X-Forwarded-For` with the connecting visitor's address. Login and enquiry limits therefore apply per visitor IP. Keep the backend bound to loopback; a proxy on another host or a CDN requires reviewing the trusted proxy configuration for that topology.
 
 Back up `.data/` (or `DATA_DIR`) while the server is stopped, including uploads and the SQLite database if used. Configure database backups separately in Atlas when MongoDB is enabled. Do not publish this directory or its credential file as static content. This repository does not deploy infrastructure or configure external backups.
 

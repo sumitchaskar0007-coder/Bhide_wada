@@ -1,6 +1,7 @@
-import {useEffect,useState} from 'react'
+import {useState} from 'react'
 import PageLayout from './PageLayout'
-import {getContent} from '../api/content'
+import usePublishedContent from '../hooks/usePublishedContent'
+import PublishedMedia from '../components/PublishedMedia'
 
 const copy={
   en:{title:'News & Updates',intro:'Committee-approved notices and verified updates about Bhide Wada.',label:'Official updates',heading:'Updates from the committee',empty:'There are no approved updates to publish yet.',loading:'Loading updates…',error:'Unable to load news.',more:'Read more',less:'Show less'},
@@ -18,15 +19,15 @@ function NewsCard({item,language,moreLabel,lessLabel}){
   ].filter(Boolean).join(' ')
 
   return <article className={className}>
-    {item.mediaUrl&&(item.mediaResourceType==='video'
-      ?<video src={item.mediaUrl} controls preload="metadata" aria-label={item.title}/>
-      :<img src={item.mediaUrl} alt="" loading="lazy"/>)}
+    <PublishedMedia item={item}/>
     <div className="news-card-copy">
-      <p className="eyebrow">{new Date(item.createdAt).toLocaleDateString(language==='en'?'en':'mr')}</p>
+      <p className="eyebrow">{language==='en'?'Published: ':'प्रकाशित: '}<time dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleDateString(language==='en'?'en-IN':'mr-IN')}</time></p>
       <h3>{item.title}</h3>
       {item.summary&&<p className="published-summary">{item.summary}</p>}
       <div className="news-card-details" id={detailsId} hidden={!expanded}>
         <p>{item.content}</p>
+        {item.updatedAt!==item.createdAt&&<p className="content-provenance">{language==='en'?'Updated: ':'अद्ययावत: '}<time dateTime={item.updatedAt}>{new Date(item.updatedAt).toLocaleDateString(language==='en'?'en-IN':'mr-IN')}</time></p>}
+        {item.sourceUrl&&<a className="content-source" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">{language==='en'?'Read the source ↗':'मूळ स्रोत वाचा ↗'}</a>}
       </div>
       <button className="news-card-toggle" type="button" aria-expanded={expanded} aria-controls={detailsId} onClick={()=>setExpanded(value=>!value)}>
         {expanded?lessLabel:moreLabel}
@@ -37,15 +38,7 @@ function NewsCard({item,language,moreLabel,lessLabel}){
 
 export default function NewsPage({language='mr'}){
   const t=copy[language]||copy.mr
-  const [state,setState]=useState({items:[],loading:true,error:''})
-
-  useEffect(()=>{
-    let active=true
-    getContent('news')
-      .then(({items})=>{if(active)setState({items,loading:false,error:''})})
-      .catch(error=>{if(active)setState({items:[],loading:false,error:error.message||t.error})})
-    return ()=>{active=false}
-  },[t.error])
+  const state=usePublishedContent('news')
 
   return <PageLayout title={t.title} intro={t.intro}>
     <section className="community-news">

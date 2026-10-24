@@ -15,7 +15,14 @@ async function request(url,options={}){
 }
 
 export function getContent(type){
-  return request(`/${type}`)
+  return request(`/${type}`,{cache:'no-store'})
+}
+
+export function resolveMediaUrl(url){
+  if(url?.startsWith('/api/media/')&&configuredApiUrl){
+    return `${apiBaseUrl.replace(/\/api$/i,'')}${url}`
+  }
+  return url
 }
 
 export function getAdminSession(){

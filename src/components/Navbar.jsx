@@ -1,17 +1,37 @@
 import {useEffect, useRef, useState} from 'react'
 import {Link, usePath} from './RouterLink'
+import {committeeName} from '../site'
+import HeritagePortraits from './HeritagePortraits'
 
-export const routes=[['/','मुख्यपृष्ठ'],['/about','आमच्याविषयी'],['/committee','समिती'],['/projects','प्रकल्प / उपक्रम'],['/news','बातम्या'],['/events','कार्यक्रम'],['/gallery','गॅलरी'],['/membership','सदस्यत्व'],['/documents','दस्तऐवज'],['/contact','संपर्क'],['/announcements','घोषणा व सूचना']]
-const english=['Home','About','Committee','Projects / Activities','News','Events','Gallery','Membership','Documents','Contact','Announcements']
+const navigationPages=[
+  ['/','मुख्यपृष्ठ','Home'],
+  ['/about','भिडे वाडा','Bhide Wada'],
+  ['/phule-wada','फुले वाडा','Phule Wada'],
+  ['/phule-wada/rashtrashala','फुले वाडा — राष्ट्रशाळा','Phule Wada — Rashtrashala'],
+  ['/phule-wada/vihir','फुले वाडा — विहीर','Phule Wada — Vihir (Well)'],
+  ['/phule-wada/hostel','फुले वाडा — वसतिगृह','Phule Wada — Hostel'],
+  ['/committee','समिती','Committee'],
+  ['/projects','प्रकल्प / उपक्रम','Projects / Activities'],
+  ['/membership','सदस्यत्व','Membership'],
+  ['/announcements','सूचना व घोषणा','Notices & Announcements'],
+  ['/news','बातम्या','News'],
+  ['/events','स्पर्धा व कार्यक्रम','Competition and Program'],
+  ['/gallery','गॅलरी','Gallery'],
+  ['/documents','दस्तऐवज','Documents'],
+  ['/contact','संपर्क','Contact']
+]
+export const routes=navigationPages.map(([path,mr])=>[path,mr])
+export const english=navigationPages.map(([, ,en])=>en)
 const menuItems=[
   {mr:'मुख्यपृष्ठ',en:'Home',to:'/'},
-  {mr:'विभागाविषयी',en:'About',children:['/about','/committee','/announcements','/contact']},
-  {mr:'आयुक्तालय',en:'Commissionerate',children:['/committee','/contact']},
-  {mr:'महामंडळे',en:'Corporations',children:['/projects']},
-  {mr:'१०० दिवस कार्यक्रम अहवाल',en:'100 Day Programme Report',to:'/news'},
-  {mr:'योजना',en:'Schemes',children:['/projects','/membership','/events']},
-  {mr:'कागदपत्रे',en:'Documents',children:['/documents','/gallery']},
-  {mr:'मॅन्युअल स्कॅव्हेंजर अधिनियम २०१३',en:'Manual Scavengers Act 2013',children:['/documents','/contact']}
+  {mr:'आमच्याविषयी',en:'About',children:['/about','/phule-wada','/committee']},
+  {mr:'प्रकल्प',en:'Projects',children:['/projects','/membership']},
+  {mr:'सूचना व घोषणा',en:'Notices & Announcements',to:'/announcements'},
+  {mr:'बातम्या',en:'News',to:'/news'},
+  {mr:'स्पर्धा व कार्यक्रम',en:'Competition and Program',to:'/events'},
+  {mr:'गॅलरी',en:'Gallery',to:'/gallery'},
+  {mr:'दस्तऐवज',en:'Documents',to:'/documents'},
+  {mr:'संपर्क',en:'Contact',to:'/contact'}
 ]
 
 function Icon({name}){
@@ -30,7 +50,7 @@ export default function Navbar({language='mr',setLanguage}){
   const headerRef=useRef(null)
   const path=usePath().replace(/\/+$/,'')||'/'
   const en=language==='en'
-  const name=en?'Bhide Wada Fule Wada Rashtriy Smark Samiti':'भिडे वाडा फुले वाडा राष्ट्रीय स्मारक समिती'
+  const name=committeeName[en?'en':'mr']
   const labels=en?english:routes.map(route=>route[1])
   const close=()=>{setOpen(false);setDropdown(null);setSearchOpen(false);setAccessOpen(false)}
   useEffect(()=>{
@@ -54,7 +74,7 @@ export default function Navbar({language='mr',setLanguage}){
   return <header className="reference-header" ref={headerRef}>
     <div className="reference-utility">
       <div className="reference-shell reference-utility-inner">
-        <div className="reference-identity"><span className="india-flag" role="img" aria-label="India"><span>☸</span></span><span>महाराष्ट्र</span><span className="reference-identity-en">MAHARASHTRA</span></div>
+        <div className="reference-identity"><span className="india-flag" role="img" aria-label="India"><span>☸</span></span><span className="reference-government-name">{en?'Maharashtra Shasan':'महाराष्ट्र शासन'}</span><span className="reference-municipal-name">{en?'Pune Mahanagarpalika':'पुणे महानगरपालिका'}</span></div>
         <div className="reference-tools">
           <Link to="/admin/login" aria-label={en?'Admin login':'प्रशासक लॉगिन'} title={en?'Admin login':'प्रशासक लॉगिन'}><Icon name="login"/></Link>
           <button className="reference-language" onClick={()=>setLanguage(en?'mr':'en')} aria-label={en?'Switch to Marathi':'Switch to English'} title={en?'मराठी':'English'}><span>अ</span><span>A</span></button>
@@ -71,7 +91,7 @@ export default function Navbar({language='mr',setLanguage}){
     <div className="reference-shell reference-masthead">
       <Link className="reference-brand" to="/" onClick={close}>
         <img className="reference-brand-logo" src="/assets/images/logo.png" width="794" height="507" alt=""/>
-        <span className="reference-brand-copy"><span>{en?'Heritage · Education · Equality':'वारसा · शिक्षण · समता'}</span><b>{name}</b>{!en&&<small>Bhide Wada Fule Wada Rashtriy Smark Samiti</small>}</span>
+        <span className="reference-brand-copy"><span>{en?'Heritage · Education · Equality':'वारसा · शिक्षण · समता'}</span><b>{name}</b>{!en&&<small>{committeeName.en}</small>}</span>
       </Link>
       <div className="reference-search-wrap">
         <form className="reference-search" role="search" onSubmit={event=>{event.preventDefault();setSearchOpen(true)}}>
@@ -82,13 +102,13 @@ export default function Navbar({language='mr',setLanguage}){
           {results.length?results.map(route=>routeLink(route[0])):<p>{en?'No matching pages found.':'जुळणारी पृष्ठे सापडली नाहीत.'}</p>}
         </div>}
       </div>
-      <img className="reference-portraits" src="/assets/images/header.png" width="2170" height="725" alt={en?'Dr. B. R. Ambedkar, Mahatma Jyotirao Phule, Savitribai Phule, Rajarshi Shahu Maharaj and Annabhau Sathe':'डॉ. बाबासाहेब आंबेडकर, महात्मा ज्योतिराव फुले, सावित्रीबाई फुले, राजर्षी शाहू महाराज आणि अण्णाभाऊ साठे'}/>
+      <HeritagePortraits language={language}/>
     </div>
     <div className="reference-nav-bar">
       <div className="reference-shell reference-nav-inner">
         <nav className="reference-nav" aria-label={en?'Main navigation':'मुख्य नेव्हिगेशन'}>
           {menuItems.map((item,index)=>{
-            const active=item.to===path||item.children?.includes(path)
+            const active=item.to===path||item.children?.some(routePath=>path===routePath||path.startsWith(`${routePath}/`))
             return <div className="reference-nav-item" key={item.en}>
               {item.to?<Link to={item.to} onClick={close} className={active?'is-active':''} aria-current={active?'page':undefined}>{en?item.en:item.mr}</Link>:<>
                 <button className={active?'is-active':''} onClick={()=>setDropdown(dropdown===index?null:index)} aria-expanded={dropdown===index} aria-controls={`header-dropdown-${index}`}>{en?item.en:item.mr}<span className="reference-chevron" aria-hidden="true"/></button>
@@ -97,7 +117,7 @@ export default function Navbar({language='mr',setLanguage}){
             </div>
           })}
         </nav>
-        <button className="reference-menu-toggle" onClick={()=>{setOpen(!open);setDropdown(null)}} aria-expanded={open} aria-controls="header-all-pages" aria-label={en?(open?'Close menu':'All pages'):(open?'मेनू बंद करा':'सर्व पृष्ठे')}><Icon name={open?'close':'menu'}/></button>
+        <button className="reference-menu-toggle" onClick={()=>{setOpen(!open);setDropdown(null)}} aria-expanded={open} aria-controls="header-all-pages" aria-label={en?(open?'Close menu':'All pages'):(open?'मेनू बंद करा':'सर्व पृष्ठे')}><Icon name={open?'close':'menu'}/><span className="reference-menu-label">{en?(open?'Close':'Menu'):(open?'बंद करा':'मेनू')}</span></button>
         {open&&<nav id="header-all-pages" className="reference-all-pages" aria-label={en?'All pages':'सर्व पृष्ठे'}>{routes.map(route=>routeLink(route[0]))}</nav>}
       </div>
     </div>

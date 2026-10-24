@@ -4,7 +4,7 @@ import {getAdminSession,logoutAdmin} from '../../api/content'
 
 const links=[
   ['/admin/dashboard','Overview','◫'],
-  ['/admin/announcements','Announcements','◉'],
+  ['/admin/announcements','Notices & Announcements','◉'],
   ['/admin/news','News','▤'],
   ['/admin/events','Events','▦'],
   ['/admin/gallery','Gallery','▧'],

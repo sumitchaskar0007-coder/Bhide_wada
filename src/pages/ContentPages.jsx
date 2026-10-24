@@ -1,12 +1,9 @@
 import {useState} from 'react'
 import {submitEnquiry} from '../api/content'
 import PageLayout from './PageLayout'
+import HeritageAboutMedia from '../components/HeritageAboutMedia'
 
 const heritageImages={
-  about:[
-    {src:'https://commons.wikimedia.org/wiki/Special:FilePath/MAHATMA_fule_vada_(22).JPG?width=1200',alt:'Mahatma Phule Wada in Pune',credit:'Mahatma Phule Wada, Wikimedia Commons',source:'https://commons.wikimedia.org/wiki/File:MAHATMA_fule_vada_(22).JPG'},
-    {src:'https://commons.wikimedia.org/wiki/Special:FilePath/Savitribai_Phule_with_Fatima_Sheikh.jpg?width=700',alt:'Savitribai Phule with Fatima Sheikh and students',credit:'Savitribai Phule with Fatima Sheikh, Wikimedia Commons',source:'https://commons.wikimedia.org/wiki/File:Savitribai_Phule_with_Fatima_Sheikh.jpg'}
-  ],
   committee:[
     {src:'https://commons.wikimedia.org/wiki/Special:FilePath/Mahatma_Jyotiba_Phule.jpg?width=700',alt:'Portrait of Mahatma Jyotiba Phule',credit:'Mahatma Jyotiba Phule, Wikimedia Commons',source:'https://commons.wikimedia.org/wiki/File:Mahatma_Jyotiba_Phule.jpg'},
     {src:'https://commons.wikimedia.org/wiki/Special:FilePath/Savitribai_Phule_1998_stamp_of_India.jpg?width=700',alt:'Savitribai Phule commemorative stamp',credit:'Savitribai Phule stamp, Wikimedia Commons',source:'https://commons.wikimedia.org/wiki/File:Savitribai_Phule_1998_stamp_of_India.jpg'}
@@ -26,7 +23,7 @@ const pages={
   en:{
     about:{title:'About Bhide Wada',intro:'Bhide Wada is a landmark of women’s public education and social reform in India.',sections:[
       ['Historical background',['Located at 257, Budhwar Peth, Bhide Wada holds a permanent place in modern Indian history. On 1 January 1848, Savitribai Phule and Jyotirao Phule defied harsh social norms to open India’s first indigenous school for girls here. The building was offered for this work by their progressive associate, Tatyasaheb Bhide.','After a long legal process involving commercial tenancy rights, the site was cleared for redevelopment as a national memorial.']],
-      ['Historical highlights',['The Historic Well — In 1868, Mahatma Phule opened his private courtyard well to the public. This courageous act gave Dalit and formerly untouchable communities access to clean water, directly challenging caste discrimination.','The Living Museum — Visitors can explore preserved rooms and galleries with vintage photographs, handwritten scripts, and timelines tracing the rise of the Satyashodhak Samaj (Society of Truth Seekers).','The Central Court — The central courtyard honours Jyotirao and Savitribai Phule through bronze busts beneath the historic tree canopy.']],
+      ['A legacy of education and equality',['The school at Bhide Wada challenged the exclusion of girls from formal education. Savitribai and Jyotirao Phule’s work continues to inspire the pursuit of equal learning opportunities.','Bhide Wada in Budhwar Peth and the Phule family home in Ganj Peth are separate heritage sites. Together, their stories connect education with social reform in Pune.']],
       ['Bhide Wada National Memorial Site',['Location: 257, Budhwar Peth, Tulshibaug, Pune, Maharashtra 411002.','Significance: Birthplace of women’s public education in India.']]
     ]},
     projects:{title:'National Memorial: Project Updates',intro:'Published reports describe the Bhide Wada memorial project. Construction figures and progress below are attributed to those reports and are not a live PMC status feed.',sections:[
@@ -42,7 +39,7 @@ const pages={
   mr:{
     about:{title:'भिडे वाड्याची ओळख',intro:'भिडे वाडा हा भारतातील स्त्रियांच्या सार्वजनिक शिक्षणाचा आणि सामाजिक सुधारणेचा महत्त्वाचा ऐतिहासिक वारसा आहे.',sections:[
       ['ऐतिहासिक पार्श्वभूमी',['२५७, बुधवार पेठ येथे असलेल्या भिडे वाड्याला आधुनिक भारतीय इतिहासात कायमचे स्थान आहे. १ जानेवारी १८४८ रोजी सावित्रीबाई आणि ज्योतिराव फुले यांनी कठोर सामाजिक रूढींना आव्हान देत येथे भारतातील मुलींसाठी पहिली स्वदेशी शाळा सुरू केली. ही जागा त्यांचे पुरोगामी सहकारी तात्यासाहेब भिडे यांनी उपलब्ध करून दिली होती.','व्यावसायिक भाडेहक्कांबाबतच्या दीर्घ कायदेशीर प्रक्रियेनंतर या ठिकाणाचा राष्ट्रीय स्मारक म्हणून पुनर्विकासाचा मार्ग मोकळा झाला.']],
-      ['ऐतिहासिक वैशिष्ट्ये',['ऐतिहासिक विहीर — १८६८ मध्ये महात्मा फुले यांनी त्यांच्या खाजगी अंगणातील विहीर सर्वांसाठी खुली केली. या धाडसी निर्णयामुळे दलित आणि तत्कालीन अस्पृश्य समाजाला स्वच्छ पाण्याचा हक्क मिळाला आणि जातीय भेदभावाला थेट आव्हान दिले गेले.','जिवंत संग्रहालय — जतन केलेल्या खोल्या व दालनांमध्ये दुर्मीळ जुनी छायाचित्रे, हस्तलिखिते आणि सत्यशोधक समाजाच्या उदयाचा इतिहास सांगणारी कालरेषा पाहता येईल.','मध्यवर्ती अंगण — ऐतिहासिक वृक्षछायेतील मध्यवर्ती अंगणात ज्योतिराव आणि सावित्रीबाई फुले यांच्या कांस्य प्रतिमांना अभिवादन करता येईल.']],
+      ['शिक्षण आणि समतेचा वारसा',['भिडे वाड्यातील शाळेने मुलींना औपचारिक शिक्षणापासून दूर ठेवणाऱ्या रूढींना आव्हान दिले. सावित्रीबाई आणि ज्योतिराव फुले यांचे कार्य आजही शिक्षणातील समान संधींसाठी प्रेरणा देते.','बुधवार पेठेतील भिडे वाडा आणि गंज पेठेतील फुले कुटुंबाचे घर ही दोन वेगवेगळी ऐतिहासिक स्थळे आहेत. या दोन्ही स्थळांचा इतिहास पुण्यातील शिक्षण आणि सामाजिक सुधारणांशी जोडलेला आहे.']],
       ['भिडे वाडा राष्ट्रीय स्मारक स्थळ',['पत्ता: २५७, बुधवार पेठ, तुळशीबाग, पुणे, महाराष्ट्र ४११००२.','महत्त्व: भारतातील स्त्रियांच्या सार्वजनिक शिक्षणाचे जन्मस्थान.']]
     ]},
     projects:{
@@ -71,6 +68,7 @@ export function ContentPage({type,language='mr'}) {
   const images=heritageImages[type]
 
   return <PageLayout title={page.title} intro={page.intro}>
+    {type==='about'&&<HeritageAboutMedia site="bhide" language={language}/>}
     {images&&<div className="heritage-image-grid">{images.map(image=><figure className="heritage-image" key={image.src}>
       <img src={image.src} alt={image.alt}/>
       <figcaption><a href={image.source} target="_blank" rel="noreferrer">{image.credit}</a></figcaption>

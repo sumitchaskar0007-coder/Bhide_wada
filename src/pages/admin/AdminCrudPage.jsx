@@ -1,15 +1,17 @@
 import {useCallback,useEffect,useState} from 'react'
-import {adminRequest} from '../../api/content'
+import {adminRequest,resolveMediaUrl} from '../../api/content'
+import {Link} from '../../components/RouterLink'
+import PublishedMedia from '../../components/PublishedMedia'
 
 const configurations={
   announcements:{
-    title:'Announcements',type:'announcements',
+    title:'Notices & Announcements',type:'announcements',
     fields:[['title','Title','text'],['summary','Short summary','textarea'],['content','Announcement details','textarea'],['link','Link (optional website path or HTTPS URL)','text'],['expiresAt','Expiry date (optional)','datetime-local']],
     checkboxes:[['pinned','Pin to the top']]
   },
   news:{
     title:'News',type:'news',
-    fields:[['title','Title','text'],['summary','Summary','textarea'],['content','Full content','textarea']]
+    fields:[['title','Title','text'],['summary','Summary','textarea'],['content','Full content','textarea'],['sourceUrl','Verified source URL (optional HTTPS link)','url']]
   },
   events:{
     title:'Events',type:'events',
@@ -17,7 +19,7 @@ const configurations={
   },
   gallery:{
     title:'Gallery',type:'gallery',
-    fields:[['title','Title','text'],['description','Description / alt text','textarea']]
+    fields:[['title','Title','text'],['description','Description / alt text','textarea'],['capturedAt','Photograph / video taken on (optional)','date'],['sourceUrl','Source / photographer link (optional HTTPS URL)','url']]
   },
   hero:{
     title:'Home hero images',type:'hero',
@@ -54,6 +56,7 @@ function readDraft(section,config){
 
 export default function AdminCrudPage({section}){
   const config=configurations[section]
+  const publicPath=section==='hero'?'/':`/${config.type}`
   const [items,setItems]=useState([])
   const [query,setQuery]=useState('')
   const [statusFilter,setStatusFilter]=useState('all')
@@ -168,7 +171,7 @@ export default function AdminCrudPage({section}){
         method:editing?'PUT':'POST',
         body
       })
-      setState(current=>({...current,saving:false,notice:result.mediaCleanupWarning||`${config.title} saved successfully.`}))
+      setState(current=>({...current,saving:false,notice:result.mediaCleanupWarning||(form.published?(section==='announcements'&&form.expiresAt&&new Date(form.expiresAt)<=new Date()?'Saved. This notice is expired and is hidden from the public page.':section==='hero'&&!form.active?'Saved. Enable “Show in home hero” to display this slide.':'Published successfully. Open “View public page” to see your changes.'):'Draft saved. Check “Publish on website” and save to display it publicly.')}))
       resetForm()
       await load()
     }catch(error){
@@ -191,10 +194,12 @@ export default function AdminCrudPage({section}){
 
   const visibleItems=items.filter(item=>(statusFilter==='all'||(statusFilter==='published'?item.published:!item.published))&&`${item.title} ${item.summary||item.description||''}`.toLowerCase().includes(query.toLowerCase()))
   return <section className="admin-manager">
-    <div className="admin-manager-heading"><div><p className="eyebrow">Manage published content</p><h2>{config.title}</h2></div><button className="outline" type="button" onClick={load} disabled={state.loading}>Refresh</button></div>
+    <div className="admin-manager-heading"><div><p className="eyebrow">Manage published content</p><h2>{config.title}</h2></div><div className="admin-page-actions"><Link className="outline" to={publicPath} target="_blank" rel="noreferrer">View public page ↗</Link><button className="outline" type="button" onClick={load} disabled={state.loading}>Refresh</button></div></div>
+    <p className="admin-intro">Save with “Publish on website” checked to display this item on the <Link to={publicPath} target="_blank" rel="noreferrer">public {section==='hero'?'home':section} page ↗</Link>.{section==='announcements'?' Pinned notices appear first. Notices are hidden after their expiry date.':''}</p>
     {state.error&&<p className="admin-error" role="alert">{state.error}</p>}
     {state.notice&&<p className="admin-notice" role="status">{state.notice}</p>}
     <form className="admin-content-form" onSubmit={submit}>
+      {['gallery','news','hero'].includes(section)&&<p className="admin-intro">Publish verified material with the site name, date and source. Label archival photographs and illustrations clearly. Unpublish material that no longer represents current progress; uploading an older image does not make it a current site photograph.</p>}
       <div className="admin-form-heading"><h3>{editing?'Edit item':`Add ${config.title.toLowerCase()}`}</h3><button className="outline" type="button" onClick={clearDraft}>Clear draft</button></div>
       {config.fields.map(([name,label,type])=><label key={name}>{label}
         {type==='textarea'
@@ -231,7 +236,7 @@ export default function AdminCrudPage({section}){
         :<label>{section==='hero'?'Hero image (required)':'Cover image / video (optional)'}
           <input id="content-media" type="file" accept={section==='hero'?'image/jpeg,image/png,image/webp,image/gif':'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm'} required={section==='hero'&&!editing} onChange={event=>setMedia(event.target.files?.[0]||null)}/>
         </label>}
-      {editing?.mediaUrl&&<p className="admin-current-media">Current media: <a href={editing.mediaUrl} target="_blank" rel="noreferrer">open file ↗</a></p>}
+      {editing?.mediaUrl&&<p className="admin-current-media">Current media: <a href={resolveMediaUrl(editing.mediaUrl)} target="_blank" rel="noreferrer">open file ↗</a></p>}
       <div className="admin-form-actions">
         <button className="primary" type="submit" disabled={state.saving}>{state.saving?'Saving…':editing?'Save changes':'Create item'}</button>
         {editing&&<button className="outline" type="button" onClick={clearDraft}>Cancel editing</button>}
@@ -244,12 +249,8 @@ export default function AdminCrudPage({section}){
       {!state.loading&&items.length>0&&visibleItems.length===0&&<p>No records match your search.</p>}
       {!state.loading&&items.length===0&&<p>No records yet. Use the form above to add one.</p>}
       {visibleItems.map(item=><article className="admin-record" key={item._id}>
-        {item.mediaUrl&&(item.mediaProvider==='youtube'
-          ?<iframe src={item.mediaUrl} title={item.title} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/>
-          :item.mediaResourceType==='video'
-          ?<video src={item.mediaUrl} controls preload="metadata"/>
-          :<img src={item.mediaUrl} alt={item.title}/>)}
-        <div className="admin-record-copy"><h4>{item.title} <span className={`admin-status ${item.published?'status-read':'status-new'}`}>{item.published?'Published':'Draft'}</span></h4><p>{item.summary||item.description||item.location||item.altText}</p>{item.date&&<small>{new Date(item.date).toLocaleString()}</small>}{section==='hero'&&<small className={item.active?'hero-active-status':'hero-inactive-status'}>{item.active?'Visible in home hero':'Hidden from home hero'}</small>}</div>
+        <PublishedMedia item={item}/>
+        <div className="admin-record-copy"><h4>{item.title} <span className={`admin-status ${item.published?'status-read':'status-new'}`}>{item.published?(item.expiresAt&&new Date(item.expiresAt)<=new Date()?'Expired':'Published'):'Draft'}</span></h4><p>{item.summary||item.description||item.location||item.altText}</p>{item.date&&<small>{new Date(item.date).toLocaleString()}</small>}{section==='hero'&&<small className={item.active?'hero-active-status':'hero-inactive-status'}>{item.active?'Visible in home hero':'Hidden from home hero'}</small>}</div>
         <div className="admin-record-actions"><button className="outline" type="button" onClick={()=>{editItem(item);document.querySelector('.admin-content-form')?.scrollIntoView({behavior:'smooth',block:'start'})}}>Edit</button><button className="admin-delete" type="button" onClick={()=>remove(item)}>Delete</button></div>
       </article>)}
     </div>
