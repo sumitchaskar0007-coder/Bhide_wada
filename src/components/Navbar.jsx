@@ -10,7 +10,7 @@ const navigationPages=[
   ['/phule-wada/rashtrashala','फुले वाडा — राष्ट्रशाळा','Phule Wada — Rashtrashala'],
   ['/phule-wada/vihir','फुले वाडा — विहीर','Phule Wada — Vihir (Well)'],
   ['/phule-wada/hostel','फुले वाडा — वसतिगृह','Phule Wada — Hostel'],
-  ['/committee','समिती','Committee'],
+  ['/committee','समितीविषयी','About the Committee'],
   ['/projects','प्रकल्प / उपक्रम','Projects / Activities'],
   ['/membership','सदस्यत्व','Membership'],
   ['/announcements','सूचना व घोषणा','Notices & Announcements'],

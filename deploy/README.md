@@ -1,5 +1,28 @@
 # Host bhidewada on 187.127.137.105
 
+## Current live hosting (verified 2 November 2026)
+
+Nginx serves **https://phulewadarashtriyasmarak.com** and its `www` hostname
+from **`/var/www/bhide_wada_f/dist`**. The existing API subdomain,
+**https://api.phulewadarashtriyasmarak.com**, proxies to port **5038** and
+the backend at `/var/www/bhide_wada_b/server.js`. The alternative
+`/var/www/bhidewada` service on port 5039 is not running.
+
+The tracked `.env.production` points frontend requests to the existing API.
+For frontend updates, build locally, back up the live `dist` directory,
+upload assets first, and replace `index.html` last. Keep old hashed assets
+available for visitors with an older page open. No backend restart or Nginx
+configuration change is required for these frontend updates.
+
+The existing API supports hero, news, events, gallery and administrator
+sessions. Its `/api/announcements` endpoint currently returns 404; enabling
+announcements requires a separate compatible backend update.
+
+## Alternative unified deployment plan
+
+The remaining instructions describe moving to the separate service on port
+5039. They are not the current live hosting configuration.
+
 Target website: **https://phulewadarashtriyasmarak.com**.
 The Node service serves the React build and `/api` together. Nginx forwards
 requests to `127.0.0.1:5039`. No separate frontend process is needed.

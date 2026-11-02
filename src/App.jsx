@@ -1,4 +1,5 @@
-import {useState} from 'react'
+import {useEffect,useState} from 'react'
+import {committeeName} from './site'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Dignitaries from './components/Dignitaries'
@@ -57,6 +58,10 @@ const adminRoutes={
 export default function App(){
   const [language,setLanguage]=useState(()=>localStorage.getItem('language')||'mr')
   const path=usePath().replace(/\/+$/,'')||'/'
+  useEffect(()=>{
+    document.title=committeeName[language]||committeeName.mr
+    document.documentElement.lang=language==='en'?'en':'mr'
+  },[language])
 
   if(path==='/admin/login') return <AdminLogin/>
   if(adminRoutes[path]) return <AdminGuard><AdminLayout><div key={path}>{adminRoutes[path]}</div></AdminLayout></AdminGuard>

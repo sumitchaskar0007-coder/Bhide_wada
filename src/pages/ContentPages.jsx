@@ -2,13 +2,7 @@ import {useState} from 'react'
 import {submitEnquiry} from '../api/content'
 import PageLayout from './PageLayout'
 import HeritageAboutMedia from '../components/HeritageAboutMedia'
-
-const heritageImages={
-  committee:[
-    {src:'https://commons.wikimedia.org/wiki/Special:FilePath/Mahatma_Jyotiba_Phule.jpg?width=700',alt:'Portrait of Mahatma Jyotiba Phule',credit:'Mahatma Jyotiba Phule, Wikimedia Commons',source:'https://commons.wikimedia.org/wiki/File:Mahatma_Jyotiba_Phule.jpg'},
-    {src:'https://commons.wikimedia.org/wiki/Special:FilePath/Savitribai_Phule_1998_stamp_of_India.jpg?width=700',alt:'Savitribai Phule commemorative stamp',credit:'Savitribai Phule stamp, Wikimedia Commons',source:'https://commons.wikimedia.org/wiki/File:Savitribai_Phule_1998_stamp_of_India.jpg'}
-  ]
-}
+import {committeeContent} from '../committeeContent'
 
 const common={
   en:{
@@ -30,10 +24,7 @@ const pages={
       ['Reported progress — May 2026',['During a site visit in May 2026, Maharashtra minister Atul Save was reported as saying that work was around 90% complete and would be completed within the following year. This was a reported progress estimate and target, not confirmation that the memorial is now complete. Please check current Pune Municipal Corporation notices for the latest official status.']],
       ['Tender and funding reports — 2024',['Hindustan Times reported that PMC floated a ₹7.26 crore tender in June 2024, with a nine-month construction period. The Indian Express later reported PMC approval of ₹7.19 crore in August 2024. These are amounts from different reported stages; neither is presented here as the final awarded contract value.']]
     ]},
-    committee:{title:'Committee Information',intro:'We could not verify an official, current committee roster, mandate, or contact channel in a government or municipal notice. Published reports use different committee names, so their identities are not assumed to be the same.',sections:[
-      ['What published reports say',['Hindustan Times identified Nilesh Girme as president of the Mahatma Phule Smarak Rahivashi Kruti Samiti. Pune Pulse referred to Ajay Khedekar as chairman of the Bhidewada National Memorial Committee. The reports do not establish that these are the same body or verify a current office-holder list.']],
-      ['Official information',['This website does not publish unverified committee roles, social profiles, or contact details as official. Please rely on a committee or Pune Municipal Corporation notice for confirmed names and contact information.']]
-    ]},
+    committee:committeeContent.en,
     news:{title:'News & Updates',intro:'Official notices, meeting outcomes, and project progress will be published here after committee approval.',sections:[]},events:{title:'Events',intro:'Find information about heritage walks, public discussions, resident meetings, and educational programmes.',sections:[]},membership:{title:'Membership / Participate',intro:'Contact the committee to help preserve Bhide Wada’s history, share information, or join its activities.',sections:[]},documents:{title:'Documents / Downloads',intro:'Official reports, notices, applications, circulars, and rehabilitation-related documents will be available here.',sections:[]}
   },
   mr:{
@@ -50,14 +41,7 @@ const pages={
         ['२०२४ मधील निविदा व निधीविषयक वृत्त',['हिंदुस्तान टाइम्सने जून २०२४ मध्ये पीएमसीने ₹७.२६ कोटींची निविदा काढल्याचे आणि कामासाठी नऊ महिन्यांचा कालावधी सांगितल्याचे वृत्त दिले. इंडियन एक्सप्रेसने नंतर ऑगस्ट २०२४ मध्ये पीएमसीने ₹७.१९ कोटी मंजूर केल्याचे वृत्त दिले. हे वेगवेगळ्या टप्प्यांबाबतचे वृत्तांकित आकडे आहेत; यापैकी कोणताही अंतिम कंत्राटाचा दर म्हणून येथे सांगितलेला नाही.']]
       ]
     },
-    committee:{
-      title:'समितीविषयक माहिती',
-      intro:'शासकीय किंवा महानगरपालिका सूचनेतून समितीची अधिकृत व अद्ययावत पदाधिकारी यादी, कार्यकक्षा किंवा संपर्क माध्यम आम्हाला पडताळता आले नाही. प्रकाशित वृत्तांतांत वेगवेगळी समिती-नावे आढळतात; त्यांना एकच संस्था मानलेले नाही.',
-      sections:[
-        ['प्रकाशित वृत्तांतांतील उल्लेख',['हिंदुस्तान टाइम्सने निलेश गिर्मे यांचा उल्लेख महात्मा फुले स्मारक रहिवासी कृती समितीचे अध्यक्ष असा केला आहे. पुणे पल्सने अजय खेडेकर यांचा उल्लेख भिडेवाडा राष्ट्रीय स्मारक समितीचे अध्यक्ष असा केला आहे. ही एकच संस्था असल्याचे किंवा सध्याच्या पदाधिकाऱ्यांची यादी असल्याचे हे वृत्तांत सिद्ध करत नाहीत.']],
-        ['अधिकृत माहिती',['पडताळणी न केलेली पदे, सामाजिक प्रोफाइल किंवा संपर्क तपशील या संकेतस्थळावर अधिकृत म्हणून दिलेले नाहीत. पुष्टी केलेली नावे व संपर्कासाठी समितीची किंवा पुणे महानगरपालिकेची अधिकृत सूचना पहावी.']]
-      ]
-    },
+    committee:committeeContent.mr,
     news:{title:'बातम्या व अपडेट्स',intro:'समितीच्या मंजुरीनंतर अधिकृत सूचना, बैठकींचे निष्कर्ष आणि प्रकल्प प्रगती येथे प्रसिद्ध केली जाईल.',sections:[]},events:{title:'कार्यक्रम',intro:'वारसा फेऱ्या, जनसंवाद, रहिवासी बैठका आणि शैक्षणिक कार्यक्रमांची माहिती येथे मिळेल.',sections:[]},membership:{title:'सदस्यत्व / सहभागी व्हा',intro:'भिडे वाड्याचा इतिहास जपण्यासाठी, माहिती देण्यासाठी किंवा उपक्रमांत सहभागी होण्यासाठी समितीशी संपर्क साधा.',sections:[]},documents:{title:'दस्तऐवज / डाउनलोड्स',intro:'अधिकृत अहवाल, सूचना, अर्ज, परिपत्रके आणि पुनर्वसनाशी संबंधित कागदपत्रे येथे उपलब्ध केली जातील.',sections:[]}
   }
 }
@@ -65,14 +49,22 @@ const pages={
 export function ContentPage({type,language='mr'}) {
   const t=pages[language]||pages.mr
   const page=t[type]||t.about
-  const images=heritageImages[type]
+
+  if(type==='committee') return <PageLayout title={page.title} intro={page.intro}>
+    <div className="committee-information" lang={language==='en'?'en':'mr'}>
+      {page.sections.map(([heading,paragraphs,items=[]])=><section className="content-detail" key={heading}>
+        <h2>{heading}</h2>
+        {paragraphs.map(text=><p className="lead-copy" key={text}>{text}</p>)}
+        {items.map(([title,description])=><article className="committee-information-item" key={title}>
+          <h3>{title}</h3>
+          <p className="lead-copy">{description}</p>
+        </article>)}
+      </section>)}
+    </div>
+  </PageLayout>
 
   return <PageLayout title={page.title} intro={page.intro}>
     {type==='about'&&<HeritageAboutMedia site="bhide" language={language}/>}
-    {images&&<div className="heritage-image-grid">{images.map(image=><figure className="heritage-image" key={image.src}>
-      <img src={image.src} alt={image.alt}/>
-      <figcaption><a href={image.source} target="_blank" rel="noreferrer">{image.credit}</a></figcaption>
-    </figure>)}</div>}
     {page.sections.length
       ?page.sections.map(([heading,paragraphs])=><section className="content-detail" key={heading}>
         <p className="eyebrow">{heading}</p>
@@ -92,13 +84,6 @@ export function ContentPage({type,language='mr'}) {
       <p>{language==='en'?'Historical background source:':'ऐतिहासिक माहितीसाठी स्रोत:'}</p>
       <ul>
         <li><a href="https://indianexpress.com/article/cities/pune/pmc-approves-money-for-bhide-wada-memorial-in-pune-9511474/" target="_blank" rel="noreferrer">The Indian Express, 13 August 2024</a></li>
-      </ul>
-    </div>}
-    {type==='committee'&&<div className="source-note">
-      <p>{language==='en'?'These are media reports, not official committee notices.':'हे माध्यमांतील वृत्तांत आहेत; अधिकृत समिती सूचना नाहीत.'}</p>
-      <ul>
-        <li><a href="https://www.hindustantimes.com/cities/pune-news/bhidewada-memorial-work-90-complete-project-to-be-completed-within-a-year-atul-save-101778746675170.html" target="_blank" rel="noreferrer">Hindustan Times, 14 May 2026</a></li>
-        <li><a href="https://www.mypunepulse.com/pune-bhidewada-national-memorial-to-be-completed-within-a-year/" target="_blank" rel="noreferrer">Pune Pulse, 13 May 2026</a></li>
       </ul>
     </div>}
   </PageLayout>

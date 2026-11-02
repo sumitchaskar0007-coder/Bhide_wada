@@ -1,5 +1,5 @@
 export const committeeName={
-  en:'Bhidewada–Phulewada Rashtriya Smarak Samiti',
+  en:'Bhidewada–Phulewada National Memorial Committee',
   mr:'भिडेवाडा–फुलेवाडा राष्ट्रीय स्मारक समिती'
 }
 
