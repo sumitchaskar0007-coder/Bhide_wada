@@ -7,7 +7,6 @@ import {resolve,join} from 'node:path'
 import {randomUUID,randomBytes,createHash} from 'node:crypto'
 import {hashPassword,verifyPassword} from './store.js'
 import {createRepository} from './repository.js'
-
 const types=['announcements','news','events','gallery','hero']
 const fields={announcements:['title','summary','content','link','expiresAt'],news:['title','summary','content','sourceUrl'],events:['title','summary','content','date','location'],gallery:['title','description','capturedAt','sourceUrl'],hero:['title','altText']}
 const sha=value=>createHash('sha256').update(value).digest('hex')
